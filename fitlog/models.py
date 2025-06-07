@@ -1,6 +1,6 @@
 from datetime import datetime, time
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class Split(BaseModel):
@@ -29,7 +29,8 @@ class Run(BaseModel):
     wind_speed: int | None = None
     splits: list[Split] | None = None
 
-    @validator("distance_miles")
+    @field_validator("distance_miles")
+    @classmethod
     def validate_distance(cls, v):
         if v <= 0:
             raise ValueError("Distance must be positive")
@@ -57,7 +58,8 @@ class Pushup(BaseModel):
     date: datetime = Field(default_factory=datetime.now)
     count: int = Field(gt=0)
 
-    @validator("count")
+    @field_validator("count")
+    @classmethod
     def validate_count(cls, v):
         if v <= 0:
             raise ValueError("Count must be positive")
