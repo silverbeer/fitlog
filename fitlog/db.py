@@ -67,10 +67,12 @@ class Database:
 
     def _tables_exist(self) -> bool:
         """Check if the required tables exist."""
-        result = self.conn.execute("""
+        result = self.conn.execute(
+            """
             SELECT count(*) FROM sqlite_master
             WHERE type='table' AND name IN ('runs', 'splits', 'pushups')
-        """).fetchone()[0]
+        """
+        ).fetchone()[0]
         return result == 3
 
     def drop_tables(self):
@@ -88,7 +90,8 @@ class Database:
 
         # Create runs table with activity_id
         print("Creating runs table...")
-        self.conn.execute("""
+        self.conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS runs (
                 activity_id INTEGER PRIMARY KEY,
                 date VARCHAR,
@@ -106,13 +109,15 @@ class Database:
                 humidity DOUBLE,
                 wind_speed DOUBLE
             )
-        """)
+        """
+        )
         self.conn.commit()
         print("Created runs table")
 
         # Create splits table for per-mile data
         print("Creating splits table...")
-        self.conn.execute("""
+        self.conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS splits (
                 activity_id INTEGER,
                 mile_number INTEGER,
@@ -123,17 +128,20 @@ class Database:
                 FOREIGN KEY (activity_id) REFERENCES runs(activity_id),
                 PRIMARY KEY (activity_id, mile_number)
             )
-        """)
+        """
+        )
         self.conn.commit()
 
         print("Created splits table")
         # Create pushups table
-        self.conn.execute("""
+        self.conn.execute(
+            """
             CREATE TABLE pushups (
                 date VARCHAR,
                 count INTEGER
             )
-        """)
+        """
+        )
         print("Created pushups table")
         self.conn.commit()
         print("Tables committed")
@@ -345,15 +353,15 @@ class Database:
             "runs": {
                 "total": len(runs),
                 "total_distance": sum(r.distance_miles for r in runs),
-                "avg_distance": sum(r.distance_miles for r in runs) / len(runs)
-                if runs
-                else 0,
+                "avg_distance": (
+                    sum(r.distance_miles for r in runs) / len(runs) if runs else 0
+                ),
             },
             "pushups": {
                 "total": len(pushups),
                 "total_count": sum(p.count for p in pushups),
-                "avg_count": sum(p.count for p in pushups) / len(pushups)
-                if pushups
-                else 0,
+                "avg_count": (
+                    sum(p.count for p in pushups) / len(pushups) if pushups else 0
+                ),
             },
         }

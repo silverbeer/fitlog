@@ -76,13 +76,11 @@ async def get_report(
         return {
             "status": "success",
             "report_period": days,
-            "period_type": "week"
-            if days == 7
-            else "month"
-            if days == 30
-            else "year"
-            if days == 365
-            else "custom",
+            "period_type": (
+                "week"
+                if days == 7
+                else "month" if days == 30 else "year" if days == 365 else "custom"
+            ),
             "overall_statistics": {
                 "total_runs": 0,
                 "total_miles": 0.0,

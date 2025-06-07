@@ -71,9 +71,9 @@ def render_recent_activities(
                     "date": run.date,
                     "distance": run.distance_miles,
                     "duration": run.duration,
-                    "pace": run.pace_per_mile
-                    if hasattr(run, "pace_per_mile")
-                    else None,
+                    "pace": (
+                        run.pace_per_mile if hasattr(run, "pace_per_mile") else None
+                    ),
                     "pushups": 0,
                 }
             else:
