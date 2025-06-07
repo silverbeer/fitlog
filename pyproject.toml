@@ -145,6 +145,9 @@ disallow_untyped_defs = false
 minversion = "7.0"
 addopts = "-ra -q --strict-markers --strict-config"
 testpaths = ["tests"]
+markers = [
+    "e2e: mark test as end-to-end test against deployed API",
+]
 filterwarnings = [
     "error",
     "ignore::UserWarning",

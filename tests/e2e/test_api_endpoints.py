@@ -307,13 +307,5 @@ class TestAPIPerformance:
             assert data["status"] == "healthy"
 
 
-# Pytest configuration for E2E tests
-def pytest_configure(config):
-    """Configure pytest for E2E tests"""
-    config.addinivalue_line(
-        "markers", "e2e: mark test as end-to-end test against deployed API"
-    )
-
-
 # Mark all tests in this file as e2e tests
 pytestmark = pytest.mark.e2e
