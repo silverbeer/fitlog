@@ -46,11 +46,11 @@ repos:
   #     - id: bandit
   #       args: ["-ll", "-x", "tests/"]
 
-  # Type checking with mypy (disabled for now - can re-enable after fixing types)
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.11.2
-  #   hooks:
-  #     - id: mypy
-  #       additional_dependencies: [types-requests]
-  #       args: [--ignore-missing-imports, --no-strict-optional, --allow-untyped-defs]
-  #       files: ^fitlog/
+  # Type checking with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-python-dateutil]
+        args: [--ignore-missing-imports]
+        files: ^fitlog/
