@@ -184,57 +184,8 @@ jobs:
           pydantic \
           boto3 \
           mangum \
+          httpx \
           --target lambda-deploy/
-
-        # Create Lambda handler if it doesn't exist
-        if [ ! -f lambda-deploy/main.py ]; then
-          cat > lambda-deploy/main.py << 'EOF'
-        import json
-        from mangum import Mangum
-        from fastapi import FastAPI
-
-        # Import your fitlog modules here
-        # from fitlog.models import Run, Pushup
-        # from fitlog.db import init_db
-
-        app = FastAPI(
-            title="Fitlog API",
-            description="Personal exercise tracking API",
-            version="2.0.0"
-        )
-
-        @app.get("/")
-        async def health_check():
-            return {
-                "message": "Fitlog API v2.0.0",
-                "status": "healthy",
-                "environment": "cloud"
-            }
-
-        @app.get("/runs")
-        async def get_runs():
-            return {"message": "Get runs endpoint - implement with DuckDB S3"}
-
-        @app.post("/runs")
-        async def create_run():
-            return {"message": "Create run endpoint - implement with DuckDB S3"}
-
-        @app.get("/pushups")
-        async def get_pushups():
-            return {"message": "Get pushups endpoint - implement with DuckDB S3"}
-
-        @app.post("/pushups")
-        async def create_pushups():
-            return {"message": "Create pushups endpoint - implement with DuckDB S3"}
-
-        @app.get("/activities/status")
-        async def get_status():
-            return {"message": "Activity status endpoint - implement with DuckDB S3"}
-
-        # Lambda handler
-        handler = Mangum(app)
-        EOF
-        fi
 
         # Create deployment zip
         cd lambda-deploy

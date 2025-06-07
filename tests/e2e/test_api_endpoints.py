@@ -118,16 +118,17 @@ class TestRunsEndpoints:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify response structure
-        assert "message" in data
-        assert "data" in data
-        assert "todo" in data
+        # Should return a list of runs (may be empty)
+        assert isinstance(data, list)
 
-        # Verify content
-        assert "DuckDB S3 implementation" in data["message"]
-        assert isinstance(data["data"], list)
-        assert isinstance(data["todo"], list)
-        assert len(data["todo"]) > 0
+        # If there are runs, verify structure
+        if data:
+            run = data[0]
+            assert "activity_id" in run
+            assert "date" in run
+            assert "duration" in run
+            assert "distance_miles" in run
+            assert "pace_per_mile" in run
 
     def test_create_run_endpoint(self, client: APIClient):
         """Test POST /runs endpoint"""
@@ -138,16 +139,18 @@ class TestRunsEndpoints:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify response structure
+        # Verify response structure for successful creation
         assert "message" in data
-        assert "received_data" in data
-        assert "todo" in data
+        assert "run" in data
+        assert "Run created successfully" in data["message"]
 
-        # Verify received data matches what we sent
-        received = data["received_data"]
-        assert received["duration"] == run_data["duration"]
-        assert received["distance"] == run_data["distance"]
-        assert received["date"] == run_data["date"]
+        # Verify created run data
+        created_run = data["run"]
+        assert "activity_id" in created_run
+        assert created_run["duration"] == run_data["duration"]
+        assert created_run["distance_miles"] == run_data["distance"]
+        assert "pace_per_mile" in created_run
+        assert created_run["activity_id"] is not None
 
     def test_create_run_without_date(self, client: APIClient):
         """Test POST /runs endpoint without date (should default to today)"""
@@ -158,10 +161,43 @@ class TestRunsEndpoints:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify date was set to today
-        received = data["received_data"]
-        today = datetime.now().strftime("%m/%d/%y")
-        assert received["date"] == today
+        # Verify successful creation
+        assert "message" in data
+        assert "run" in data
+        assert "Run created successfully" in data["message"]
+
+        # Verify run was created with today's date
+        created_run = data["run"]
+        created_date = datetime.fromisoformat(created_run["date"])
+        today = datetime.now().date()
+        assert created_date.date() == today
+
+    def test_create_run_invalid_duration(self, client: APIClient):
+        """Test POST /runs with invalid duration format"""
+        invalid_data = {"duration": "invalid_format", "distance": 3.0}
+
+        response = client.post("/runs", data=invalid_data)
+        assert response.status_code == 400  # Bad request for invalid duration
+
+    def test_create_run_invalid_distance(self, client: APIClient):
+        """Test POST /runs with invalid distance"""
+        invalid_data = {"duration": "30:00:00", "distance": -1.0}
+
+        response = client.post("/runs", data=invalid_data)
+        assert response.status_code == 422  # Validation error for negative distance
+
+    def test_get_runs_with_date_filter(self, client: APIClient):
+        """Test GET /runs with date filtering"""
+        # Test with date range parameters
+        response = client.get(
+            "/runs",
+            params={"start_date": "2025-01-01", "end_date": "2025-12-31", "limit": 10},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) <= 10  # Respect limit parameter
 
 
 class TestPushupsEndpoints:
@@ -174,15 +210,14 @@ class TestPushupsEndpoints:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify response structure
-        assert "message" in data
-        assert "data" in data
-        assert "todo" in data
+        # Should return a list of pushup entries (may be empty)
+        assert isinstance(data, list)
 
-        # Verify content
-        assert "DuckDB S3 implementation" in data["message"]
-        assert isinstance(data["data"], list)
-        assert isinstance(data["todo"], list)
+        # If there are pushups, verify structure
+        if data:
+            pushup = data[0]
+            assert "date" in pushup
+            assert "count" in pushup
 
     def test_create_pushup_endpoint(self, client: APIClient):
         """Test POST /pushups endpoint"""
@@ -193,15 +228,15 @@ class TestPushupsEndpoints:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify response structure
+        # Verify response structure for successful creation
         assert "message" in data
-        assert "received_data" in data
-        assert "todo" in data
+        assert "pushup" in data
+        assert "Pushup entry created successfully" in data["message"]
 
-        # Verify received data
-        received = data["received_data"]
-        assert received["count"] == pushup_data["count"]
-        assert received["date"] == pushup_data["date"]
+        # Verify created pushup data
+        created_pushup = data["pushup"]
+        assert created_pushup["count"] == pushup_data["count"]
+        assert "date" in created_pushup
 
     def test_create_pushup_without_date(self, client: APIClient):
         """Test POST /pushups endpoint without date"""
@@ -212,10 +247,36 @@ class TestPushupsEndpoints:
         assert response.status_code == 200
         data = response.json()
 
-        # Verify date was set to today
-        received = data["received_data"]
-        today = datetime.now().strftime("%m/%d/%y")
-        assert received["date"] == today
+        # Verify successful creation
+        assert "message" in data
+        assert "pushup" in data
+        assert "Pushup entry created successfully" in data["message"]
+
+        # Verify pushup was created with today's date
+        created_pushup = data["pushup"]
+        created_date = datetime.fromisoformat(created_pushup["date"])
+        today = datetime.now().date()
+        assert created_date.date() == today
+
+    def test_create_pushup_invalid_count(self, client: APIClient):
+        """Test POST /pushups with invalid count"""
+        invalid_data = {"count": -10}
+
+        response = client.post("/pushups", data=invalid_data)
+        assert response.status_code == 422  # Validation error for negative count
+
+    def test_get_pushups_with_date_filter(self, client: APIClient):
+        """Test GET /pushups with date filtering"""
+        # Test with date range parameters
+        response = client.get(
+            "/pushups",
+            params={"start_date": "2025-01-01", "end_date": "2025-12-31", "limit": 10},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) <= 10  # Respect limit parameter
 
 
 class TestActivitiesEndpoints:
@@ -230,20 +291,51 @@ class TestActivitiesEndpoints:
 
         # Verify response structure
         assert "message" in data
-        assert "status" in data
         assert "stats" in data
-        assert "todo" in data
+        assert "Activity status retrieved successfully" in data["message"]
 
         # Verify stats structure
         stats = data["stats"]
-        assert "total_runs" in stats
-        assert "total_pushups" in stats
-        assert "current_streak" in stats
+        assert "runs" in stats
+        assert "pushups" in stats
+        assert "period" in stats
 
-        # Verify placeholder values
-        assert isinstance(stats["total_runs"], int)
-        assert isinstance(stats["total_pushups"], int)
-        assert isinstance(stats["current_streak"], int)
+        # Verify runs stats
+        runs_stats = stats["runs"]
+        assert "total" in runs_stats
+        assert "total_distance" in runs_stats
+        assert "avg_distance" in runs_stats
+        assert isinstance(runs_stats["total"], int)
+        assert isinstance(runs_stats["total_distance"], int | float)
+        assert isinstance(runs_stats["avg_distance"], int | float)
+
+        # Verify pushups stats
+        pushups_stats = stats["pushups"]
+        assert "total" in pushups_stats
+        assert "total_count" in pushups_stats
+        assert "avg_count" in pushups_stats
+        assert isinstance(pushups_stats["total"], int)
+        assert isinstance(pushups_stats["total_count"], int)
+        assert isinstance(pushups_stats["avg_count"], int | float)
+
+        # Verify period info
+        period = stats["period"]
+        assert "days" in period
+        assert "start_date" in period
+        assert "end_date" in period
+        assert period["days"] == 30  # Default days
+
+    def test_activity_status_custom_days(self, client: APIClient):
+        """Test GET /activities/status with custom days parameter"""
+        response = client.get("/activities/status", params={"days": 7})
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # Verify custom days parameter was used
+        stats = data["stats"]
+        period = stats["period"]
+        assert period["days"] == 7
 
 
 class TestErrorHandling:
@@ -259,8 +351,8 @@ class TestErrorHandling:
         invalid_data = {"duration": "invalid", "distance": "not_a_number"}
 
         response = client.post("/runs", data=invalid_data)
-        # Should return 422 for validation error
-        assert response.status_code == 422
+        # Should return 422 for validation error or 400 for bad request
+        assert response.status_code in [400, 422]
 
     def test_invalid_pushup_data(self, client: APIClient):
         """Test POST /pushups with invalid data"""
@@ -269,6 +361,20 @@ class TestErrorHandling:
         response = client.post("/pushups", data=invalid_data)
         # Should return 422 for validation error
         assert response.status_code == 422
+
+    def test_missing_required_fields_run(self, client: APIClient):
+        """Test POST /runs with missing required fields"""
+        incomplete_data = {"duration": "30:00:00"}  # Missing distance
+
+        response = client.post("/runs", data=incomplete_data)
+        assert response.status_code == 422  # Validation error
+
+    def test_missing_required_fields_pushup(self, client: APIClient):
+        """Test POST /pushups with missing required fields"""
+        incomplete_data = {}  # Missing count
+
+        response = client.post("/pushups", data=incomplete_data)
+        assert response.status_code == 422  # Validation error
 
 
 class TestAPIPerformance:
