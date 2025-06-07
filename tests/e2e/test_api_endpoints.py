@@ -12,21 +12,20 @@ import pytest
 import requests
 
 
-class TestDeployedAPI:
-    """Test suite for the deployed Fitlog API"""
+# Global fixtures available to all test classes
+@pytest.fixture(scope="session")
+def api_base_url() -> str:
+    """Get the API base URL from environment variable"""
+    base_url = os.getenv("API_BASE_URL")
+    if not base_url:
+        pytest.skip("API_BASE_URL environment variable not set")
+    return base_url.rstrip("/")
 
-    @pytest.fixture(scope="class")
-    def api_base_url(self) -> str:
-        """Get the API base URL from environment variable"""
-        base_url = os.getenv("API_BASE_URL")
-        if not base_url:
-            pytest.skip("API_BASE_URL environment variable not set")
-        return base_url.rstrip("/")
 
-    @pytest.fixture(scope="class")
-    def client(self, api_base_url: str):
-        """HTTP client configured for the deployed API"""
-        return APIClient(api_base_url)
+@pytest.fixture(scope="session")
+def client(api_base_url: str):
+    """HTTP client configured for the deployed API"""
+    return APIClient(api_base_url)
 
 
 class APIClient:
