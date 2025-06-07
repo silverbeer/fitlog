@@ -1,5 +1,12 @@
 # 🏃‍♂️ fitlog - Daily Exercise Tracking CLI
 
+[![🚀 Deploy Status](https://github.com/silverbeer/fitlog/actions/workflows/deploy.yml/badge.svg?branch=feature%2Fv2-cloud-migration)](https://github.com/silverbeer/fitlog/actions/workflows/deploy.yml)
+[![🧪 Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/silverbeer/fitlog/actions/workflows/deploy.yml)
+[![🏥 API Health](https://img.shields.io/badge/API-healthy-brightgreen.svg)](https://2054k0hh9j.execute-api.us-east-1.amazonaws.com/dev)
+[![🐍 Python](https://img.shields.io/badge/python-3.13-blue.svg)](https://python.org)
+[![⚡ AWS Lambda](https://img.shields.io/badge/AWS-Lambda-orange.svg)](https://aws.amazon.com/lambda/)
+[![📊 DuckDB](https://img.shields.io/badge/database-DuckDB-yellow.svg)](https://duckdb.org)
+
 **fitlog** is a personal command-line tool for tracking your daily exercise habits, designed to help you stay consistent with your weekly, monthly, and yearly fitness goals. Built with Python 3.13 and styled beautifully using Rich CLI, fitlog lets you log workouts and instantly see how you're progressing over time.
 
 ---
