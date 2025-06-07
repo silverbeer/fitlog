@@ -22,6 +22,12 @@ env:
   LAMBDA_FUNCTION_NAME: fitlog-dev-api
   PYTHON_VERSION: '3.13'
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+  actions: read
+
 jobs:
   test:
     name: 🧪 Test Application
@@ -46,6 +52,7 @@ jobs:
         uv venv
         source .venv/bin/activate
         uv pip install -e ".[dev,test]"
+        uv pip install pytest-html
 
     - name: 🧹 Lint with ruff
       run: |
@@ -65,7 +72,7 @@ jobs:
     - name: 🧪 Run tests
       run: |
         source .venv/bin/activate
-        uv run pytest -v --tb=short --junit-xml=test-results.xml
+        uv run pytest -v --tb=short --junit-xml=test-results.xml --html=pytest-html-report.html --self-contained-html
 
     - name: 📊 Generate test summary
       if: always()
@@ -114,6 +121,19 @@ jobs:
         path: test-results.xml
         reporter: java-junit
         fail-on-error: false
+        list-suites: all
+        list-tests: failed
+        max-annotations: 10
+
+    - name: 📋 Upload test artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: |
+          test-results.xml
+          pytest-html-report.html
+        retention-days: 30
 
   deploy:
     name: 🚀 Deploy to AWS Lambda
