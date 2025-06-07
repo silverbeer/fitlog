@@ -47,6 +47,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "fitlog_data" {
     id     = "fitlog_lifecycle"
     status = "Enabled"
 
+    # Apply to all objects (empty filter means all objects)
+    filter {}
+
     # Transition older data to cheaper storage classes
     transition {
       days          = 30

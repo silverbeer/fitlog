@@ -326,3 +326,21 @@ uv build
 ## 📄 License
 
 MIT (to be added)
+
+---
+
+## 🚀 GitHub Actions
+
+Instead of this manual process:
+```bash
+git push
+cd infrastructure
+zip lambda_function.zip main.py
+aws lambda update-function-code ...
+terraform apply
+```
+
+You'll get this:
+```bash
+git push  # 🎉 Everything deploys automatically!
+```
