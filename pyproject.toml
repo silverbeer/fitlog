@@ -47,20 +47,27 @@ test = [
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
 ]
+cloud = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "boto3>=1.34.0",
+    "aioboto3>=12.0.0",
+    "mangum>=0.17.0",
+]
 
 [project.scripts]
 fitlog = "fitlog.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/tdrake/fitlog"
-Repository = "https://github.com/tdrake/fitlog.git"
-Issues = "https://github.com/tdrake/fitlog/issues"
+Homepage = "https://github.com/silverbeer/fitlog"
+Repository = "https://github.com/silverbeer/fitlog.git"
+Issues = "https://github.com/silverbeer/fitlog/issues"
 
 # Ruff configuration
 [tool.ruff]
 line-length = 88
 target-version = "py313"
-src = ["fitlog", "tests"]
+src = ["fitlog", "tests", "api"]
 
 [tool.ruff.lint]
 select = [
@@ -81,9 +88,10 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["ARG", "S101"]
+"api/**/*" = ["ARG"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["fitlog"]
+known-first-party = ["fitlog", "api"]
 
 # Black configuration
 [tool.black]
@@ -121,6 +129,10 @@ strict_equality = true
 module = "tests.*"
 disallow_untyped_defs = false
 
+[[tool.mypy.overrides]]
+module = "api.*"
+disallow_untyped_defs = false
+
 # Pytest configuration
 [tool.pytest.ini_options]
 minversion = "7.0"
@@ -133,7 +145,7 @@ filterwarnings = [
 
 # Coverage configuration
 [tool.coverage.run]
-source = ["fitlog"]
+source = ["fitlog", "api"]
 branch = true
 
 [tool.coverage.report]
