@@ -13,4 +13,4 @@ output "bucket_arn" {
 output "bucket_domain_name" {
   description = "Domain name of the S3 bucket"
   value       = aws_s3_bucket.fitlog_data.bucket_domain_name
-} 
+}

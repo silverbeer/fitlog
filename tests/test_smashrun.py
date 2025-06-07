@@ -9,6 +9,7 @@ from fitlog.smashrun import SmashrunClient
 # Load environment variables from .env file
 load_dotenv()
 
+
 @pytest.fixture
 def client():
     """Create a Smashrun client using the token from environment variables."""
@@ -16,6 +17,7 @@ def client():
     if not token:
         pytest.skip("SMASHRUN_ACCESS_TOKEN not set in environment")
     return SmashrunClient(token)
+
 
 def test_get_runs_yesterday(client):
     """Test fetching runs from yesterday."""
@@ -33,6 +35,10 @@ def test_get_runs_yesterday(client):
     # If there were any runs yesterday, validate their structure
     for run in runs:
         assert run is not None, "Run should not be None"
-        assert run.date.date() == yesterday.date(), f"Run date should be yesterday, got {run.date}"
-        assert run.distance_miles > 0, f"Distance should be positive, got {run.distance_miles}"
+        assert (
+            run.date.date() == yesterday.date()
+        ), f"Run date should be yesterday, got {run.date}"
+        assert (
+            run.distance_miles > 0
+        ), f"Distance should be positive, got {run.distance_miles}"
         assert run.duration is not None, "Duration should not be None"

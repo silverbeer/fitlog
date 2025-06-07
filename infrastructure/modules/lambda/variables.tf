@@ -34,4 +34,4 @@ variable "tags" {
   description = "Tags to apply to Lambda resources"
   type        = map(string)
   default     = {}
-} 
+}

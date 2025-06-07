@@ -48,13 +48,16 @@ def run_e2e_tests(api_url: str, verbose: bool = False) -> bool:
 
     # Construct pytest command
     cmd = [
-        sys.executable, "-m", "pytest",
+        sys.executable,
+        "-m",
+        "pytest",
         "tests/e2e/test_api_endpoints.py",
         "-v" if verbose else "-q",
         "--tb=short",
-        "-m", "e2e",
+        "-m",
+        "e2e",
         "--no-header",
-        "--color=yes"
+        "--color=yes",
     ]
 
     print(f"🧪 Running E2E tests against: {api_url}")
@@ -121,58 +124,53 @@ Examples:
 
   # Verbose output
   python run_e2e_tests.py --api-url https://api.example.com/dev --verbose
-        """
+        """,
     )
 
     # URL specification (mutually exclusive)
     url_group = parser.add_mutually_exclusive_group(required=True)
     url_group.add_argument(
         "--api-url",
-        help="Full API Gateway URL (e.g., https://abc123.execute-api.us-east-1.amazonaws.com/dev)"
+        help="Full API Gateway URL (e.g., https://abc123.execute-api.us-east-1.amazonaws.com/dev)",
     )
     url_group.add_argument(
-        "--api-id",
-        help="API Gateway ID (will construct URL with --region)"
+        "--api-id", help="API Gateway ID (will construct URL with --region)"
     )
 
     # Additional options
     parser.add_argument(
         "--region",
         default="us-east-1",
-        help="AWS region (default: us-east-1, used with --api-id)"
+        help="AWS region (default: us-east-1, used with --api-id)",
     )
     parser.add_argument(
         "--stage",
         default="dev",
-        help="API Gateway stage (default: dev, used with --api-id)"
+        help="API Gateway stage (default: dev, used with --api-id)",
     )
     parser.add_argument(
         "--smoke-only",
         action="store_true",
-        help="Run only quick smoke test, not full E2E suite"
+        help="Run only quick smoke test, not full E2E suite",
     )
     parser.add_argument(
         "--skip-availability-check",
         action="store_true",
-        help="Skip initial API availability check"
+        help="Skip initial API availability check",
     )
-    parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Verbose output"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument(
         "--timeout",
         type=int,
         default=30,
-        help="Timeout for API availability check (default: 30s)"
+        help="Timeout for API availability check (default: 30s)",
     )
 
     args = parser.parse_args()
 
     # Determine API URL
     if args.api_url:
-        api_url = args.api_url.rstrip('/')
+        api_url = args.api_url.rstrip("/")
     else:
         api_url = construct_api_url(args.api_id, args.region, args.stage)
 

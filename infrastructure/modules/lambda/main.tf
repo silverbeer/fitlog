@@ -52,7 +52,7 @@ resource "aws_lambda_function_url" "fitlog_api" {
 # Create a placeholder zip file if one doesn't exist
 resource "null_resource" "lambda_zip" {
   count = var.create_placeholder_zip ? 1 : 0
-  
+
   provisioner "local-exec" {
     command = <<EOF
 mkdir -p ${dirname(var.lambda_zip_path)}
@@ -81,4 +81,4 @@ EOF
   triggers = {
     always_run = timestamp()
   }
-} 
+}

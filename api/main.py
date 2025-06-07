@@ -15,13 +15,14 @@ from fastapi import FastAPI
 from mangum import Mangum
 from pydantic import BaseModel
 
-sys.path.append('..')
+sys.path.append("..")
 
 app = FastAPI(
     title="Fitlog API",
     description="Personal exercise tracking API - Cloud Version",
-    version="2.0.0"
+    version="2.0.0",
 )
+
 
 # Pydantic models for API
 class RunCreate(BaseModel):
@@ -29,9 +30,11 @@ class RunCreate(BaseModel):
     distance: float  # miles
     date: str | None = None  # MM/DD/YY format
 
+
 class PushupCreate(BaseModel):
     count: int
     date: str | None = None  # MM/DD/YY format
+
 
 @app.get("/")
 async def health_check():
@@ -42,8 +45,9 @@ async def health_check():
         "environment": os.getenv("ENVIRONMENT", "unknown"),
         "s3_bucket": os.getenv("S3_BUCKET", "unknown"),
         "lambda_function": os.getenv("AWS_LAMBDA_FUNCTION_NAME", "unknown"),
-        "timestamp": datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.utcnow().isoformat() + "Z",
     }
+
 
 @app.get("/runs")
 async def get_runs():
@@ -54,9 +58,10 @@ async def get_runs():
         "todo": [
             "Connect to DuckDB on S3",
             "Query runs from cloud database",
-            "Return paginated results"
-        ]
+            "Return paginated results",
+        ],
     }
+
 
 @app.post("/runs")
 async def create_run(run: RunCreate):
@@ -66,14 +71,15 @@ async def create_run(run: RunCreate):
         "received_data": {
             "duration": run.duration,
             "distance": run.distance,
-            "date": run.date or datetime.now().strftime("%m/%d/%y")
+            "date": run.date or datetime.now().strftime("%m/%d/%y"),
         },
         "todo": [
             "Validate run data with fitlog.models.Run",
             "Store in DuckDB on S3",
-            "Return created run with ID"
-        ]
+            "Return created run with ID",
+        ],
     }
+
 
 @app.get("/pushups")
 async def get_pushups():
@@ -84,9 +90,10 @@ async def get_pushups():
         "todo": [
             "Connect to DuckDB on S3",
             "Query pushups from cloud database",
-            "Return paginated results"
-        ]
+            "Return paginated results",
+        ],
     }
+
 
 @app.post("/pushups")
 async def create_pushup(pushup: PushupCreate):
@@ -95,14 +102,15 @@ async def create_pushup(pushup: PushupCreate):
         "message": "Create pushup endpoint - ready for DuckDB S3 implementation",
         "received_data": {
             "count": pushup.count,
-            "date": pushup.date or datetime.now().strftime("%m/%d/%y")
+            "date": pushup.date or datetime.now().strftime("%m/%d/%y"),
         },
         "todo": [
             "Validate pushup data with fitlog.models.Pushup",
             "Store in DuckDB on S3",
-            "Return created pushup with ID"
-        ]
+            "Return created pushup with ID",
+        ],
     }
+
 
 @app.get("/activities/status")
 async def get_activity_status():
@@ -110,17 +118,14 @@ async def get_activity_status():
     return {
         "message": "Activity status endpoint - ready for DuckDB S3 implementation",
         "status": "placeholder",
-        "stats": {
-            "total_runs": 0,
-            "total_pushups": 0,
-            "current_streak": 0
-        },
+        "stats": {"total_runs": 0, "total_pushups": 0, "current_streak": 0},
         "todo": [
             "Connect to DuckDB on S3",
             "Calculate real statistics",
-            "Return activity streaks and goals"
-        ]
+            "Return activity streaks and goals",
+        ],
     }
+
 
 @app.get("/test")
 async def test_endpoint():
@@ -138,12 +143,14 @@ async def test_endpoint():
             "function_name": os.getenv("AWS_LAMBDA_FUNCTION_NAME"),
             "function_version": os.getenv("AWS_LAMBDA_FUNCTION_VERSION"),
             "memory_limit": os.getenv("AWS_LAMBDA_FUNCTION_MEMORY_SIZE"),
-        }
+        },
     }
+
 
 # Lambda handler for AWS
 handler = Mangum(app)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

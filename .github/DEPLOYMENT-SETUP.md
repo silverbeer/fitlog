@@ -6,7 +6,7 @@ This guide walks you through setting up automated deployments for your fitlog in
 
 We have two GitHub Actions workflows:
 
-| Workflow | Trigger | Purpose | 
+| Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | **`deploy.yml`** | Code changes (`api/`, `fitlog/`) | Deploy FastAPI to Lambda |
 | **`infrastructure.yml`** | Infrastructure changes | Deploy Terraform changes |
@@ -52,19 +52,19 @@ aws_secret_access_key = xxxxx...
      --user-name github-actions-fitlog \
      --policy-arn arn:aws:iam::aws:policy/AWSLambdaFullAccess \
      --profile personal
-     
-   # API Gateway permissions  
+
+   # API Gateway permissions
    aws iam attach-user-policy \
      --user-name github-actions-fitlog \
      --policy-arn arn:aws:iam::aws:policy/AmazonAPIGatewayAdministrator \
      --profile personal
-     
+
    # S3 and DynamoDB for Terraform state
    aws iam attach-user-policy \
      --user-name github-actions-fitlog \
      --policy-arn arn:aws:iam::aws:policy/AmazonS3FullAccess \
      --profile personal
-     
+
    aws iam attach-user-policy \
      --user-name github-actions-fitlog \
      --policy-arn arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess \
@@ -123,7 +123,7 @@ app = FastAPI(
 async def health_check():
     return {
         "message": "Fitlog API v2.0.0",
-        "status": "healthy", 
+        "status": "healthy",
         "environment": os.getenv("ENVIRONMENT", "unknown"),
         "s3_bucket": os.getenv("S3_BUCKET", "unknown")
     }
@@ -210,7 +210,7 @@ Once set up, your deployment workflow becomes:
 # 1. Make code changes
 vim fitlog/api.py
 
-# 2. Commit and push  
+# 2. Commit and push
 git add .
 git commit -m "Add new endpoint for activity status"
 git push origin feature/v2-cloud-migration
@@ -311,6 +311,6 @@ aws lambda invoke --function-name fitlog-dev-api response.json
 ## 📚 **Next Steps**
 
 1. **Set up monitoring**: CloudWatch dashboards and alerts
-2. **Add integration tests**: Test API endpoints after deployment  
+2. **Add integration tests**: Test API endpoints after deployment
 3. **Implement blue/green deployments**: Zero-downtime deployments
-4. **Add staging environment**: Test changes before production 
+4. **Add staging environment**: Test changes before production

@@ -26,19 +26,22 @@ load_dotenv()
 app = typer.Typer()
 db = Database()
 
+
 @app.command()
 def log_run(
     duration: str = typer.Option(..., help="Run duration in HH:MM:SS format"),
     distance: float = typer.Option(..., help="Distance in miles"),
-    date: str | None = typer.Option(None, help="Date in MM/DD/YY format (default: today)"),
-    debug: bool = typer.Option(False, "--debug", help="Show debug output")
+    date: str | None = typer.Option(
+        None, help="Date in MM/DD/YY format (default: today)"
+    ),
+    debug: bool = typer.Option(False, "--debug", help="Show debug output"),
 ):
     """Log a run with duration and distance."""
     try:
         # Set debug mode on database instance
         db.debug = debug
         # Parse duration string to time object
-        h, m, s = map(int, duration.split(':'))
+        h, m, s = map(int, duration.split(":"))
         duration_time = time(hour=h, minute=m, second=s)
 
         # Parse date if provided
@@ -51,15 +54,20 @@ def log_run(
 
         run = Run(date=run_date, duration=duration_time, distance_miles=distance)
         db.log_run(run, debug=debug)
-        render_success(f"Logged run: {distance} miles in {duration} on {run_date.strftime('%A %m/%d/%y')}")
+        render_success(
+            f"Logged run: {distance} miles in {duration} on {run_date.strftime('%A %m/%d/%y')}"
+        )
     except Exception as e:
         render_error(str(e))
+
 
 @app.command()
 def log_pushups(
     count: int = typer.Option(..., help="Number of pushups"),
-    date: str | None = typer.Option(None, help="Date in MM/DD/YY format (default: today)"),
-    debug: bool = typer.Option(False, "--debug", help="Show debug output")
+    date: str | None = typer.Option(
+        None, help="Date in MM/DD/YY format (default: today)"
+    ),
+    debug: bool = typer.Option(False, "--debug", help="Show debug output"),
 ):
     """Log pushups."""
     try:
@@ -75,14 +83,19 @@ def log_pushups(
 
         pushup = Pushup(date=pushup_date, count=count)
         db.log_pushups(pushup)
-        render_success(f"Logged {count} pushups on {pushup_date.strftime('%A %m/%d/%y')}")
+        render_success(
+            f"Logged {count} pushups on {pushup_date.strftime('%A %m/%d/%y')}"
+        )
     except Exception as e:
         render_error(str(e))
+
 
 @app.command()
 def status(
     days: int = typer.Option(7, help="Number of days to show"),
-    debug: bool = typer.Option(False, "--debug", help="Show debug output including database queries")
+    debug: bool = typer.Option(
+        False, "--debug", help="Show debug output including database queries"
+    ),
 ):
     """Show recent activities and statistics."""
     try:
@@ -99,17 +112,20 @@ def status(
     except Exception as e:
         render_error(str(e))
 
+
 @app.command()
 def import_smashrun(
     access_token: str = typer.Option(
         os.getenv("SMASHRUN_ACCESS_TOKEN"),
-        help="Smashrun API access token (can be set via SMASHRUN_ACCESS_TOKEN env var)"
+        help="Smashrun API access token (can be set via SMASHRUN_ACCESS_TOKEN env var)",
     ),
-    days: int = typer.Option(30, help="Number of days of history to import")
+    days: int = typer.Option(30, help="Number of days of history to import"),
 ):
     """Import runs from Smashrun API."""
     if not access_token:
-        render_error("No access token provided. Please set SMASHRUN_ACCESS_TOKEN environment variable or provide --access-token")
+        render_error(
+            "No access token provided. Please set SMASHRUN_ACCESS_TOKEN environment variable or provide --access-token"
+        )
         raise typer.Exit(1)
 
     try:
@@ -140,11 +156,14 @@ def import_smashrun(
     except Exception as e:
         render_error(f"Failed to import runs: {str(e)}")
 
+
 @app.command()
 def get_run(
     days: int = typer.Option(1, help="Number of days back to look for runs"),
     show_splits: bool = typer.Option(False, help="Show per-mile split information"),
-    debug: bool = typer.Option(False, "--debug", help="Show debug output including database queries")
+    debug: bool = typer.Option(
+        False, "--debug", help="Show debug output including database queries"
+    ),
 ):
     """Get runs from the database."""
     try:
@@ -162,7 +181,9 @@ def get_run(
             return
 
         # Create table to display runs
-        table = Table(title=f"🏃 Runs from {start_date.strftime('%m/%d/%y')} to {end_date.strftime('%m/%d/%y')}")
+        table = Table(
+            title=f"🏃 Runs from {start_date.strftime('%m/%d/%y')} to {end_date.strftime('%m/%d/%y')}"
+        )
         table.add_column("Date", style="cyan")
         table.add_column("Distance (mi)", style="green", justify="right")
         table.add_column("Duration", style="blue", justify="right")
@@ -187,7 +208,7 @@ def get_run(
                 run.pace_per_mile.strftime("%M:%S"),
                 f"{run.heart_rate_avg}" if run.heart_rate_avg else "-",
                 f"{run.cadence_avg}" if run.cadence_avg else "-",
-                ", ".join(weather_info) if weather_info else "-"
+                ", ".join(weather_info) if weather_info else "-",
             )
 
         console.print(table)
@@ -196,10 +217,15 @@ def get_run(
     except Exception as e:
         render_error(str(e))
 
+
 @app.command()
 def report(
-    days: int = typer.Option(7, help="Number of days to report on (7=week, 30=month, 365=year)"),
-    debug: bool = typer.Option(False, "--debug", help="Show debug output including database queries")
+    days: int = typer.Option(
+        7, help="Number of days to report on (7=week, 30=month, 365=year)"
+    ),
+    debug: bool = typer.Option(
+        False, "--debug", help="Show debug output including database queries"
+    ),
 ):
     """Show a summary report of your runs."""
     # Initialize database
@@ -221,21 +247,36 @@ def report(
         total_runs = len(runs)
         total_miles = sum(run.distance_miles for run in runs)
         # Convert time to timedelta for total_seconds calculation
-        avg_pace = sum(timedelta(hours=r.pace_per_mile.hour,
-                                minutes=r.pace_per_mile.minute,
-                                seconds=r.pace_per_mile.second).total_seconds()
-                      for r in runs) / len(runs)
+        avg_pace = sum(
+            timedelta(
+                hours=r.pace_per_mile.hour,
+                minutes=r.pace_per_mile.minute,
+                seconds=r.pace_per_mile.second,
+            ).total_seconds()
+            for r in runs
+        ) / len(runs)
 
         # Calculate averages for non-null values
         hr_runs = [run for run in runs if run.heart_rate_avg]
         cadence_runs = [run for run in runs if run.cadence_avg]
-        avg_hr = sum(run.heart_rate_avg for run in hr_runs) / len(hr_runs) if hr_runs else 0
-        avg_cadence = sum(run.cadence_avg for run in cadence_runs) / len(cadence_runs) if cadence_runs else 0
+        avg_hr = (
+            sum(run.heart_rate_avg for run in hr_runs) / len(hr_runs) if hr_runs else 0
+        )
+        avg_cadence = (
+            sum(run.cadence_avg for run in cadence_runs) / len(cadence_runs)
+            if cadence_runs
+            else 0
+        )
 
         # Find records
-        fastest_run = min(runs, key=lambda r: timedelta(hours=r.pace_per_mile.hour,
-                                                        minutes=r.pace_per_mile.minute,
-                                                        seconds=r.pace_per_mile.second).total_seconds())
+        fastest_run = min(
+            runs,
+            key=lambda r: timedelta(
+                hours=r.pace_per_mile.hour,
+                minutes=r.pace_per_mile.minute,
+                seconds=r.pace_per_mile.second,
+            ).total_seconds(),
+        )
         highest_cadence_run = max(runs, key=lambda r: r.cadence_avg or 0)
         longest_run = max(runs, key=lambda r: r.distance_miles)
 
@@ -243,7 +284,9 @@ def report(
         stats_table = Table(show_header=False, box=None)
         stats_table.add_row("Total Runs", f"{total_runs}")
         stats_table.add_row("Total Miles", f"{total_miles:.1f}")
-        stats_table.add_row("Average Pace", str(timedelta(seconds=int(avg_pace))).split('.')[0])
+        stats_table.add_row(
+            "Average Pace", str(timedelta(seconds=int(avg_pace))).split(".")[0]
+        )
         if avg_hr > 0:
             stats_table.add_row("Average HR", f"{avg_hr:.0f} bpm")
         if avg_cadence > 0:
@@ -253,23 +296,23 @@ def report(
         records_table = Table(show_header=False, box=None)
         records_table.add_row(
             "Fastest Run",
-            f"{fastest_run.distance_miles:.1f}mi at {fastest_run.pace_per_mile.strftime('%M:%S')}/mi on {fastest_run.date.strftime('%m/%d/%y')}"
+            f"{fastest_run.distance_miles:.1f}mi at {fastest_run.pace_per_mile.strftime('%M:%S')}/mi on {fastest_run.date.strftime('%m/%d/%y')}",
         )
         records_table.add_row(
             "Longest Run",
-            f"{longest_run.distance_miles:.1f}mi on {longest_run.date.strftime('%m/%d/%y')}"
+            f"{longest_run.distance_miles:.1f}mi on {longest_run.date.strftime('%m/%d/%y')}",
         )
         if highest_cadence_run.cadence_avg:
             records_table.add_row(
                 "Highest Cadence",
-                f"{highest_cadence_run.cadence_avg} spm on {highest_cadence_run.date.strftime('%m/%d/%y')}"
+                f"{highest_cadence_run.cadence_avg} spm on {highest_cadence_run.date.strftime('%m/%d/%y')}",
             )
 
         # Layout
         layout = Layout()
         layout.split_column(
             Layout(Panel(stats_table, title="📊 Overall Statistics")),
-            Layout(Panel(records_table, title="🏆 Personal Records"))
+            Layout(Panel(records_table, title="🏆 Personal Records")),
         )
 
         console.print(layout)
@@ -277,9 +320,12 @@ def report(
     except Exception as e:
         render_error(f"Failed to generate report: {str(e)}")
 
+
 @app.command()
 def drop_db(
-    force: bool = typer.Option(False, "--force", "-f", help="Force drop without confirmation")
+    force: bool = typer.Option(
+        False, "--force", "-f", help="Force drop without confirmation"
+    ),
 ):
     """Drop and recreate all database tables."""
     if not force:
@@ -291,12 +337,16 @@ def drop_db(
     try:
         db.drop_tables()
         db._create_tables()
-        console.print("[green]✓ Database tables dropped and recreated successfully[/green]")
+        console.print(
+            "[green]✓ Database tables dropped and recreated successfully[/green]"
+        )
     except Exception as e:
         render_error(f"Failed to drop database: {str(e)}")
 
+
 def main():
     app()
+
 
 if __name__ == "__main__":
     main()

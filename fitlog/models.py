@@ -10,6 +10,7 @@ class Split(BaseModel):
     heart_rate_avg: int | None = None
     cadence_avg: int | None = None
 
+
 class Run(BaseModel):
     activity_id: int | None = None
     date: datetime = Field(default_factory=datetime.now)
@@ -28,16 +29,18 @@ class Run(BaseModel):
     wind_speed: int | None = None
     splits: list[Split] | None = None
 
-    @validator('distance_miles')
+    @validator("distance_miles")
     def validate_distance(cls, v):
         if v <= 0:
-            raise ValueError('Distance must be positive')
+            raise ValueError("Distance must be positive")
         return v
 
     def calculate_pace(self) -> time:
         """Calculate pace per mile in MM:SS format"""
         # Convert duration to total seconds
-        total_seconds = self.duration.hour * 3600 + self.duration.minute * 60 + self.duration.second
+        total_seconds = (
+            self.duration.hour * 3600 + self.duration.minute * 60 + self.duration.second
+        )
         # Calculate seconds per mile
         seconds_per_mile = total_seconds / self.distance_miles
         # Convert to minutes and seconds
@@ -49,12 +52,13 @@ class Run(BaseModel):
         super().__init__(**data)
         self.pace_per_mile = self.calculate_pace()
 
+
 class Pushup(BaseModel):
     date: datetime = Field(default_factory=datetime.now)
     count: int = Field(gt=0)
 
-    @validator('count')
+    @validator("count")
     def validate_count(cls, v):
         if v <= 0:
-            raise ValueError('Count must be positive')
+            raise ValueError("Count must be positive")
         return v

@@ -19,7 +19,7 @@
 - **Variable-Driven**: Easy to customize for different accounts
 - **Backend Security**: S3 state bucket uses specific profile
 
-### **4. Automated Scripts**  
+### **4. Automated Scripts**
 - **Enhanced Bootstrap**: Profile validation and account checking
 - **Command Options**: Flexible profile and region specification
 - **Error Handling**: Clear messages for configuration issues
@@ -63,7 +63,7 @@ Please check your AWS profile configuration.
 - Bootstrap script validates profile exists
 - Environment variables provide defaults
 
-### **File Protection**  
+### **File Protection**
 - `*.tfvars` files in `.gitignore` (contain account IDs)
 - `backend.hcl` excluded (contains sensitive config)
 - AWS credentials never committed
@@ -90,7 +90,7 @@ Please check your AWS profile configuration.
 # Always verify which account you're using
 aws sts get-caller-identity --profile personal
 
-# Set profile for session  
+# Set profile for session
 export AWS_PROFILE=personal
 
 # Run Terraform commands
@@ -101,10 +101,10 @@ terraform apply
 ## 🆘 **If You Need Help**
 
 1. **Profile Issues**: Read `AWS-PROFILES.md`
-2. **Bootstrap Problems**: Check `BOOTSTRAP.md`  
+2. **Bootstrap Problems**: Check `BOOTSTRAP.md`
 3. **Account Validation**: Verify `EXPECTED_ACCOUNT_ID`
 4. **Permissions**: Review IAM policies in bootstrap docs
 
 ---
 
-**🔒 Your fitlog deployment is now locked to your personal AWS account!** 
+**🔒 Your fitlog deployment is now locked to your personal AWS account!**

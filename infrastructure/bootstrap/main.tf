@@ -10,7 +10,7 @@ terraform {
       version = "~> 5.0"
     }
   }
-  
+
   # NOTE: This bootstrap config uses LOCAL state
   # The main infrastructure will use the S3 backend we create here
 }
@@ -18,7 +18,7 @@ terraform {
 provider "aws" {
   region  = var.aws_region
   profile = var.aws_profile  # Use specific AWS profile for personal account
-  
+
   default_tags {
     tags = {
       Project     = "fitlog"
@@ -68,7 +68,7 @@ locals {
   account_id = data.aws_caller_identity.current.account_id
   # Make bucket name globally unique by including account ID
   state_bucket_name = "${var.state_bucket_name}-${local.account_id}"
-  
+
   # Account validation
   is_correct_account = var.expected_account_id == "" ? true : local.account_id == var.expected_account_id
 }
@@ -76,7 +76,7 @@ locals {
 # Validation check - fail if wrong account
 resource "null_resource" "account_validation" {
   count = local.is_correct_account ? 0 : 1
-  
+
   provisioner "local-exec" {
     command = <<-EOT
       echo "❌ ACCOUNT VALIDATION FAILED!"
@@ -103,7 +103,7 @@ resource "aws_s3_bucket" "terraform_state" {
     Environment = "bootstrap"
     AccountType = "personal"
   }
-  
+
   depends_on = [null_resource.account_validation]
 }
 
@@ -162,7 +162,7 @@ resource "aws_dynamodb_table" "terraform_state_lock" {
     Environment = "bootstrap"
     AccountType = "personal"
   }
-  
+
   depends_on = [null_resource.account_validation]
 }
 
@@ -203,4 +203,4 @@ output "backend_configuration" {
     encrypt        = true
     profile        = var.aws_profile
   }
-} 
+}

@@ -16,4 +16,4 @@ output "lambda_s3_policy_arn" {
 output "lambda_logs_policy_arn" {
   description = "ARN of the Lambda CloudWatch Logs policy"
   value       = aws_iam_policy.lambda_logs_policy.arn
-} 
+}

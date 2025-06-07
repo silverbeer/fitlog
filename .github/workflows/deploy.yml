@@ -24,70 +24,70 @@ jobs:
   test:
     name: 🧪 Test Application
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-      
+
     - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-        
+
     - name: 📦 Install UV
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "$HOME/.local/bin" >> $GITHUB_PATH
-        
+
     - name: 🔧 Install dependencies
       run: |
         uv venv
         source .venv/bin/activate
         uv pip install -e ".[dev,test]"
-        
+
     - name: 🧹 Lint with ruff
       run: |
         source .venv/bin/activate
         uv run ruff check .
-        
+
     - name: 🎨 Format check with black
       run: |
         source .venv/bin/activate
         uv run black --check .
-        
+
     - name: 🔍 Type check with mypy
       run: |
         source .venv/bin/activate
         uv run mypy fitlog/ --ignore-missing-imports
-        
+
     - name: 🧪 Run tests
       run: |
         source .venv/bin/activate
         uv run pytest -v
-        
+
   deploy:
     name: 🚀 Deploy to AWS Lambda
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feature/v2-cloud-migration'
     # environment: production  # Add this later in GitHub repo settings for deployment protection
-    
+
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-      
+
     - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-        
+
     - name: ⚙️ Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
-        
+
     - name: 📦 Install UV and dependencies
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -95,16 +95,16 @@ jobs:
         uv venv
         source .venv/bin/activate
         uv pip install -e ".[cloud]"
-        
+
     - name: 📦 Create Lambda deployment package
       run: |
         # Create deployment directory
         mkdir -p lambda-deploy
-        
+
         # Copy FastAPI application code
         cp -r api/* lambda-deploy/ 2>/dev/null || echo "No api/ directory yet"
         cp -r fitlog lambda-deploy/
-        
+
         # Install dependencies to deployment directory
         source .venv/bin/activate
         pip install \
@@ -115,24 +115,24 @@ jobs:
           boto3 \
           mangum \
           --target lambda-deploy/
-          
+
         # Create Lambda handler if it doesn't exist
         if [ ! -f lambda-deploy/main.py ]; then
           cat > lambda-deploy/main.py << 'EOF'
         import json
         from mangum import Mangum
         from fastapi import FastAPI
-        
+
         # Import your fitlog modules here
         # from fitlog.models import Run, Pushup
         # from fitlog.db import init_db
-        
+
         app = FastAPI(
             title="Fitlog API",
             description="Personal exercise tracking API",
             version="2.0.0"
         )
-        
+
         @app.get("/")
         async def health_check():
             return {
@@ -140,49 +140,49 @@ jobs:
                 "status": "healthy",
                 "environment": "cloud"
             }
-            
+
         @app.get("/runs")
         async def get_runs():
             return {"message": "Get runs endpoint - implement with DuckDB S3"}
-            
+
         @app.post("/runs")
         async def create_run():
             return {"message": "Create run endpoint - implement with DuckDB S3"}
-            
+
         @app.get("/pushups")
         async def get_pushups():
             return {"message": "Get pushups endpoint - implement with DuckDB S3"}
-            
+
         @app.post("/pushups")
         async def create_pushups():
             return {"message": "Create pushups endpoint - implement with DuckDB S3"}
-            
+
         @app.get("/activities/status")
         async def get_status():
             return {"message": "Activity status endpoint - implement with DuckDB S3"}
-        
+
         # Lambda handler
         handler = Mangum(app)
         EOF
         fi
-        
+
         # Create deployment zip
         cd lambda-deploy
         zip -r ../lambda-deployment.zip . -x "*.pyc" "*/__pycache__/*"
         cd ..
-        
+
     - name: 🚀 Deploy to Lambda
       run: |
         aws lambda update-function-code \
           --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
           --zip-file fileb://lambda-deployment.zip \
           --region ${{ env.AWS_REGION }}
-          
+
         # Wait for update to complete
         aws lambda wait function-updated \
           --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
           --region ${{ env.AWS_REGION }}
-          
+
     - name: 🧪 Test deployment
       run: |
         # Get function URL or API Gateway endpoint
@@ -191,7 +191,7 @@ jobs:
           --query FunctionUrl \
           --output text \
           --region ${{ env.AWS_REGION }} 2>/dev/null || echo "")
-          
+
         if [ -n "$FUNCTION_URL" ]; then
           echo "Testing Lambda Function URL: $FUNCTION_URL"
           curl -f "$FUNCTION_URL" || exit 1
@@ -206,7 +206,7 @@ jobs:
             curl -f "https://${API_ID}.execute-api.${{ env.AWS_REGION }}.amazonaws.com/dev" || exit 1
           fi
         fi
-        
+
     - name: 📊 Get API Gateway URL for E2E tests
       id: get-api-url
       run: |
@@ -215,7 +215,7 @@ jobs:
         if [ -f "infrastructure/terraform.tfstate" ]; then
           API_ID=$(cat infrastructure/terraform.tfstate | jq -r '.outputs.api_gateway_url.value // empty' | sed 's|https://||' | sed 's|\.execute-api.*||')
         fi
-        
+
         # Fallback to AWS CLI if Terraform output not available
         if [ -z "$API_ID" ]; then
           API_ID=$(aws apigateway get-rest-apis \
@@ -223,7 +223,7 @@ jobs:
             --output text \
             --region ${{ env.AWS_REGION }})
         fi
-        
+
         if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
           API_URL="https://${API_ID}.execute-api.${{ env.AWS_REGION }}.amazonaws.com/dev"
           echo "api_id=$API_ID" >> $GITHUB_OUTPUT
@@ -233,7 +233,7 @@ jobs:
           echo "❌ Could not determine API Gateway URL"
           exit 1
         fi
-        
+
     - name: 📊 Report deployment
       if: success()
       run: |
@@ -247,23 +247,23 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     if: success()
-    
+
     steps:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
-      
+
     - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ env.PYTHON_VERSION }}
-        
+
     - name: ⚙️ Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
-        
+
     - name: 📦 Install test dependencies
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -271,7 +271,7 @@ jobs:
         uv venv
         source .venv/bin/activate
         uv pip install pytest requests
-        
+
     - name: 🔍 Get API Gateway URL
       id: get-api-url
       run: |
@@ -280,7 +280,7 @@ jobs:
           --query "items[?name=='fitlog-dev-api'].id" \
           --output text \
           --region ${{ env.AWS_REGION }})
-          
+
         if [ -n "$API_ID" ] && [ "$API_ID" != "None" ]; then
           API_URL="https://${API_ID}.execute-api.${{ env.AWS_REGION }}.amazonaws.com/dev"
           echo "api_url=$API_URL" >> $GITHUB_OUTPUT
@@ -289,12 +289,12 @@ jobs:
           echo "❌ Could not find API Gateway"
           exit 1
         fi
-        
+
     - name: ⏱️ Wait for API to be ready
       run: |
         echo "🕐 Waiting for API to be fully deployed and ready..."
         API_URL="${{ steps.get-api-url.outputs.api_url }}"
-        
+
         # Wait up to 5 minutes for the API to be ready
         for i in {1..30}; do
           if curl -s --max-time 10 "$API_URL/" > /dev/null 2>&1; then
@@ -304,13 +304,13 @@ jobs:
             echo "⏳ Waiting for API... (attempt $i/30)"
             sleep 10
           fi
-          
+
           if [ $i -eq 30 ]; then
             echo "❌ API did not become ready within 5 minutes"
             exit 1
           fi
         done
-        
+
     - name: 🚀 Run smoke test
       run: |
         source .venv/bin/activate
@@ -318,14 +318,14 @@ jobs:
           --api-url "${{ steps.get-api-url.outputs.api_url }}" \
           --smoke-only \
           --verbose
-          
+
     - name: 🧪 Run full E2E test suite
       run: |
         source .venv/bin/activate
         python tests/e2e/run_e2e_tests.py \
           --api-url "${{ steps.get-api-url.outputs.api_url }}" \
           --verbose
-          
+
     - name: 📊 E2E Test Summary
       if: always()
       run: |

@@ -9,7 +9,7 @@ terraform {
       version = "~> 5.0"
     }
   }
-  
+
   # S3 backend for state storage (configured after bootstrap)
   backend "s3" {
     # These values will be provided via terraform init -backend-config
@@ -27,7 +27,7 @@ terraform {
 provider "aws" {
   region  = var.aws_region
   profile = var.aws_profile  # Use specific AWS profile for personal account
-  
+
   default_tags {
     tags = {
       Project     = "fitlog"
@@ -77,10 +77,10 @@ variable "project_name" {
 locals {
   account_id = data.aws_caller_identity.current.account_id
   name_prefix = "${var.project_name}-${var.environment}"
-  
+
   # Account validation
   is_correct_account = var.expected_account_id == "" ? true : local.account_id == var.expected_account_id
-  
+
   common_tags = {
     Project     = var.project_name
     Environment = var.environment
@@ -92,7 +92,7 @@ locals {
 # Validation check - fail if wrong account
 resource "null_resource" "account_validation" {
   count = local.is_correct_account ? 0 : 1
-  
+
   provisioner "local-exec" {
     command = <<-EOT
       echo "❌ ACCOUNT VALIDATION FAILED!"
@@ -107,48 +107,48 @@ resource "null_resource" "account_validation" {
 # S3 bucket for DuckDB storage
 module "s3" {
   source = "./modules/s3"
-  
+
   bucket_name = "${local.name_prefix}-data"
   environment = var.environment
   tags        = local.common_tags
-  
+
   depends_on = [null_resource.account_validation]
 }
 
 # IAM roles and policies
 module "iam" {
   source = "./modules/iam"
-  
+
   name_prefix = local.name_prefix
   s3_bucket_arn = module.s3.bucket_arn
   tags        = local.common_tags
-  
+
   depends_on = [null_resource.account_validation]
 }
 
 # Lambda function
 module "lambda" {
   source = "./modules/lambda"
-  
+
   function_name     = "${local.name_prefix}-api"
   s3_bucket        = module.s3.bucket_name
   lambda_role_arn  = module.iam.lambda_role_arn
   environment      = var.environment
   tags            = local.common_tags
-  
+
   depends_on = [null_resource.account_validation]
 }
 
 # API Gateway
 module "api_gateway" {
   source = "./modules/api-gateway"
-  
+
   api_name          = "${local.name_prefix}-api"
   lambda_function_arn = module.lambda.function_arn
   lambda_function_name = module.lambda.function_name
   environment       = var.environment
   tags             = local.common_tags
-  
+
   depends_on = [null_resource.account_validation]
 }
 
@@ -171,4 +171,4 @@ output "lambda_function_name" {
 output "account_id" {
   description = "AWS Account ID being used"
   value       = local.account_id
-} 
+}

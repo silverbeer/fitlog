@@ -21,7 +21,7 @@ We solve this with a **two-stage approach**:
 ## 📋 **Prerequisites**
 
 - **AWS CLI** configured with appropriate permissions
-- **Terraform >= 1.0** installed  
+- **Terraform >= 1.0** installed
 - **AWS Profile**: Personal account profile configured (see `AWS-PROFILES.md`)
 - **Permissions**: AWS credentials with permissions to create:
   - S3 buckets
@@ -65,7 +65,7 @@ Your AWS user/role needs these permissions:
 
 ## 🏃‍♀️ **Quick Start**
 
-### **Step 1: Configure AWS Profile** 
+### **Step 1: Configure AWS Profile**
 ```bash
 # Set up your personal AWS profile (prevents accidental work account usage)
 aws configure --profile personal
@@ -94,7 +94,7 @@ export EXPECTED_ACCOUNT_ID=123456789012  # Your actual account ID
 
 The script will:
 1. **Validate AWS account and profile** (prevents wrong account deployment)
-2. Check AWS CLI and Terraform installation  
+2. Check AWS CLI and Terraform installation
 3. Initialize bootstrap Terraform
 4. Create S3 bucket and DynamoDB table
 5. Generate `backend.hcl` and `terraform.tfvars` configuration files
@@ -214,4 +214,4 @@ terraform destroy  # when needed
 
 ---
 
-*This bootstrap process follows AWS and Terraform best practices for secure, collaborative infrastructure management.* 
+*This bootstrap process follows AWS and Terraform best practices for secure, collaborative infrastructure management.*

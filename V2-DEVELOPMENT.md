@@ -49,7 +49,7 @@ GET  /                           # API info
 GET  /health                     # Health check
 POST /runs                       # Log run
 GET  /runs                       # Get runs
-POST /pushups                    # Log pushups  
+POST /pushups                    # Log pushups
 GET  /pushups                    # Get pushups
 GET  /activities/status          # Activity status
 GET  /activities/report          # Generate report
@@ -171,4 +171,4 @@ fitlog status                                        # → API call
 
 ---
 
-*This is an active development branch. V1 remains stable on `main` branch.* 
+*This is an active development branch. V1 remains stable on `main` branch.*

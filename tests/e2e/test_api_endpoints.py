@@ -21,7 +21,7 @@ class TestDeployedAPI:
         base_url = os.getenv("API_BASE_URL")
         if not base_url:
             pytest.skip("API_BASE_URL environment variable not set")
-        return base_url.rstrip('/')
+        return base_url.rstrip("/")
 
     @pytest.fixture(scope="class")
     def client(self, api_base_url: str):
@@ -35,10 +35,9 @@ class APIClient:
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()
-        self.session.headers.update({
-            "Content-Type": "application/json",
-            "User-Agent": "fitlog-e2e-tests/1.0"
-        })
+        self.session.headers.update(
+            {"Content-Type": "application/json", "User-Agent": "fitlog-e2e-tests/1.0"}
+        )
 
     def get(self, endpoint: str, **kwargs):
         """Make GET request to API endpoint"""
@@ -50,7 +49,7 @@ class APIClient:
         """Make POST request to API endpoint"""
         url = f"{self.base_url}{endpoint}"
         if data:
-            kwargs['json'] = data
+            kwargs["json"] = data
         response = self.session.post(url, **kwargs)
         return response
 
@@ -81,7 +80,7 @@ class TestHealthAndStatus:
         assert "fitlog-dev-api" in data["lambda_function"]
 
         # Verify timestamp is recent (within last 5 minutes)
-        timestamp = datetime.fromisoformat(data["timestamp"].replace('Z', '+00:00'))
+        timestamp = datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00"))
         now = datetime.now().astimezone()
         time_diff = abs((now - timestamp).total_seconds())
         assert time_diff < 300, f"Timestamp too old: {time_diff} seconds"
@@ -133,11 +132,7 @@ class TestRunsEndpoints:
 
     def test_create_run_endpoint(self, client: APIClient):
         """Test POST /runs endpoint"""
-        run_data = {
-            "duration": "30:15:00",
-            "distance": 3.2,
-            "date": "06/07/25"
-        }
+        run_data = {"duration": "30:15:00", "distance": 3.2, "date": "06/07/25"}
 
         response = client.post("/runs", data=run_data)
 
@@ -157,10 +152,7 @@ class TestRunsEndpoints:
 
     def test_create_run_without_date(self, client: APIClient):
         """Test POST /runs endpoint without date (should default to today)"""
-        run_data = {
-            "duration": "25:30:00",
-            "distance": 2.8
-        }
+        run_data = {"duration": "25:30:00", "distance": 2.8}
 
         response = client.post("/runs", data=run_data)
 
@@ -195,10 +187,7 @@ class TestPushupsEndpoints:
 
     def test_create_pushup_endpoint(self, client: APIClient):
         """Test POST /pushups endpoint"""
-        pushup_data = {
-            "count": 100,
-            "date": "06/07/25"
-        }
+        pushup_data = {"count": 100, "date": "06/07/25"}
 
         response = client.post("/pushups", data=pushup_data)
 
@@ -217,9 +206,7 @@ class TestPushupsEndpoints:
 
     def test_create_pushup_without_date(self, client: APIClient):
         """Test POST /pushups endpoint without date"""
-        pushup_data = {
-            "count": 75
-        }
+        pushup_data = {"count": 75}
 
         response = client.post("/pushups", data=pushup_data)
 
@@ -270,10 +257,7 @@ class TestErrorHandling:
 
     def test_invalid_run_data(self, client: APIClient):
         """Test POST /runs with invalid data"""
-        invalid_data = {
-            "duration": "invalid",
-            "distance": "not_a_number"
-        }
+        invalid_data = {"duration": "invalid", "distance": "not_a_number"}
 
         response = client.post("/runs", data=invalid_data)
         # Should return 422 for validation error
@@ -281,9 +265,7 @@ class TestErrorHandling:
 
     def test_invalid_pushup_data(self, client: APIClient):
         """Test POST /pushups with invalid data"""
-        invalid_data = {
-            "count": "not_a_number"
-        }
+        invalid_data = {"count": "not_a_number"}
 
         response = client.post("/pushups", data=invalid_data)
         # Should return 422 for validation error

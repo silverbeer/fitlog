@@ -4,7 +4,7 @@ output "api_endpoint" {
 }
 
 output "api_gateway_url" {
-  description = "API Gateway invoke URL" 
+  description = "API Gateway invoke URL"
   value       = "https://${aws_api_gateway_rest_api.fitlog_api.id}.execute-api.${data.aws_region.current.name}.amazonaws.com/${var.environment}"
 }
 
@@ -19,4 +19,4 @@ output "api_gateway_arn" {
 }
 
 # Data source for current region
-data "aws_region" "current" {} 
+data "aws_region" "current" {}

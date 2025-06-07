@@ -109,7 +109,7 @@ CLI (local) → API Gateway → Lambda (FastAPI) → DuckDB (S3)
 - **Endpoints**: Mirror CLI commands as REST API
   ```
   POST /runs              # log_run
-  POST /pushups           # log_pushups  
+  POST /pushups           # log_pushups
   GET  /runs              # get_run
   GET  /activities/status # status
   GET  /activities/report # report
@@ -120,7 +120,7 @@ CLI (local) → API Gateway → Lambda (FastAPI) → DuckDB (S3)
 ### **Authentication Strategy**
 - **Phase 1**: Simple API Keys (stored in CLI config)
 - **Future**: AWS Cognito + JWT tokens
-- **CLI Flow**: 
+- **CLI Flow**:
   ```bash
   fitlog auth login    # Get/store token
   fitlog status        # Use token in headers
@@ -259,4 +259,4 @@ uv build
 
 ---
 
-*This document serves as the single source of truth for fitlog project requirements and should be updated as specifications evolve.* 
+*This document serves as the single source of truth for fitlog project requirements and should be updated as specifications evolve.*

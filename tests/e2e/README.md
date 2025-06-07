@@ -23,7 +23,7 @@ E2E tests run automatically after every successful deployment via GitHub Actions
 # Test using API ID and region
 python tests/e2e/run_e2e_tests.py --api-id 2054k0hh9j --region us-east-1 --smoke-only
 
-# Test using full URL  
+# Test using full URL
 python tests/e2e/run_e2e_tests.py --api-url https://2054k0hh9j.execute-api.us-east-1.amazonaws.com/dev --smoke-only
 ```
 
@@ -49,7 +49,7 @@ pytest tests/e2e/test_api_endpoints.py -v -m e2e
 - `test_health_check_endpoint()` - Verifies health endpoint and environment variables
 - `test_test_endpoint()` - Validates GitHub Actions test endpoint
 
-### API Endpoint Tests  
+### API Endpoint Tests
 - `test_get_runs_endpoint()` - Tests GET /runs
 - `test_create_run_endpoint()` - Tests POST /runs with data
 - `test_create_run_without_date()` - Tests POST /runs with default date
@@ -73,7 +73,7 @@ pytest tests/e2e/test_api_endpoints.py -v -m e2e
 ```json
 {
     "message": "🏃‍♂️ Fitlog API v2.0.0 - Cloud Edition",
-    "status": "healthy", 
+    "status": "healthy",
     "environment": "dev",
     "s3_bucket": "fitlog-dev-data",
     "lambda_function": "fitlog-dev-api",
@@ -156,8 +156,8 @@ The E2E tests are automatically run in GitHub Actions after successful deploymen
 ## 🔮 Future Improvements
 
 - [ ] Add performance benchmarking
-- [ ] Test data persistence after DuckDB S3 implementation  
+- [ ] Test data persistence after DuckDB S3 implementation
 - [ ] Add load testing scenarios
 - [ ] Test error scenarios (S3 unavailable, etc.)
 - [ ] Add metrics collection during testing
-- [ ] Test authentication when added 
+- [ ] Test authentication when added

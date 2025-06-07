@@ -90,4 +90,4 @@ resource "aws_s3_object" "metadata_folder" {
   bucket = aws_s3_bucket.fitlog_data.id
   key    = "metadata/"
   content_type = "application/x-directory"
-} 
+}

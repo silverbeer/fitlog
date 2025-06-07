@@ -26,4 +26,4 @@ output "log_group_name" {
 output "log_group_arn" {
   description = "CloudWatch Log Group ARN"
   value       = aws_cloudwatch_log_group.lambda_logs.arn
-} 
+}

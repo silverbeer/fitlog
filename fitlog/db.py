@@ -8,7 +8,12 @@ from .models import Pushup, Run, Split
 
 
 class Database:
-    def __init__(self, db_path: str = "data/fitlog.db", read_only: bool = False, debug: bool = False):
+    def __init__(
+        self,
+        db_path: str = "data/fitlog.db",
+        read_only: bool = False,
+        debug: bool = False,
+    ):
         self.db_path = db_path
         self.debug = debug
 
@@ -63,7 +68,7 @@ class Database:
     def _tables_exist(self) -> bool:
         """Check if the required tables exist."""
         result = self.conn.execute("""
-            SELECT count(*) FROM sqlite_master 
+            SELECT count(*) FROM sqlite_master
             WHERE type='table' AND name IN ('runs', 'splits', 'pushups')
         """).fetchone()[0]
         return result == 3
@@ -138,32 +143,37 @@ class Database:
         if debug is None:
             debug = self.debug
         if debug:
-            print(f"Logging run: activity_id={run.activity_id}, date={run.date}, distance={run.distance_miles}")
+            print(
+                f"Logging run: activity_id={run.activity_id}, date={run.date}, distance={run.distance_miles}"
+            )
         # Insert or update run data
-        self.conn.execute("""
+        self.conn.execute(
+            """
             INSERT OR REPLACE INTO runs (
                 activity_id, date, duration, distance_miles, pace_per_mile,
                 heart_rate_avg, heart_rate_max, heart_rate_min,
                 cadence_avg, cadence_max, cadence_min,
                 temperature, weather_type, humidity, wind_speed
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, [
-            run.activity_id,
-            run.date.strftime("%Y-%m-%d %H:%M:%S"),
-            run.duration,
-            run.distance_miles,
-            run.pace_per_mile,
-            run.heart_rate_avg,
-            run.heart_rate_max,
-            run.heart_rate_min,
-            run.cadence_avg,
-            run.cadence_max,
-            run.cadence_min,
-            run.temperature,
-            run.weather_type,
-            run.humidity,
-            run.wind_speed
-        ])
+        """,
+            [
+                run.activity_id,
+                run.date.strftime("%Y-%m-%d %H:%M:%S"),
+                run.duration,
+                run.distance_miles,
+                run.pace_per_mile,
+                run.heart_rate_avg,
+                run.heart_rate_max,
+                run.heart_rate_min,
+                run.cadence_avg,
+                run.cadence_max,
+                run.cadence_min,
+                run.temperature,
+                run.weather_type,
+                run.humidity,
+                run.wind_speed,
+            ],
+        )
         if debug:
             print("Run logged successfully")
         self.conn.commit()
@@ -171,15 +181,22 @@ class Database:
         # Insert splits if available
         if run.splits:
             for split in run.splits:
-                self.conn.execute("""
+                self.conn.execute(
+                    """
                     INSERT OR REPLACE INTO splits (
                         activity_id, mile_number, duration, pace,
                         heart_rate_avg, cadence_avg
                     ) VALUES (?, ?, ?, ?, ?, ?)
-                """, [
-                    run.activity_id, split.mile_number, split.duration, split.pace,
-                    split.heart_rate_avg, split.cadence_avg
-                ])
+                """,
+                    [
+                        run.activity_id,
+                        split.mile_number,
+                        split.duration,
+                        split.pace,
+                        split.heart_rate_avg,
+                        split.cadence_avg,
+                    ],
+                )
 
         # Commit changes
         self.conn.commit()
@@ -187,11 +204,16 @@ class Database:
     def log_pushups(self, pushup: Pushup):
         self.conn.execute(
             "INSERT INTO pushups (date, count) VALUES (?, ?)",
-            [pushup.date.strftime("%Y-%m-%d %H:%M:%S"), pushup.count]
+            [pushup.date.strftime("%Y-%m-%d %H:%M:%S"), pushup.count],
         )
         self.conn.commit()
 
-    def get_runs(self, start_date: datetime | None = None, end_date: datetime | None = None, debug: bool = None) -> list[Run]:
+    def get_runs(
+        self,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        debug: bool = None,
+    ) -> list[Run]:
         if debug is None:
             debug = self.debug
         # Get runs with all fields
@@ -249,7 +271,7 @@ class Database:
                 temperature=r[11],
                 weather_type=r[12],
                 humidity=r[13],
-                wind_speed=r[14]
+                wind_speed=r[14],
             )
 
             # Get splits for this run
@@ -259,7 +281,9 @@ class Database:
                 WHERE activity_id = ?
                 ORDER BY mile_number
             """
-            splits_result = self.conn.execute(splits_query, [run.activity_id]).fetchall()
+            splits_result = self.conn.execute(
+                splits_query, [run.activity_id]
+            ).fetchall()
 
             # Add splits to run
             run.splits = [
@@ -268,15 +292,21 @@ class Database:
                     duration=s[1],
                     pace=s[2],
                     heart_rate_avg=s[3],
-                    cadence_avg=s[4]
-                ) for s in splits_result
+                    cadence_avg=s[4],
+                )
+                for s in splits_result
             ]
 
             runs.append(run)
 
         return runs
 
-    def get_pushups(self, start_date: datetime | None = None, end_date: datetime | None = None, debug: bool = None) -> list[Pushup]:
+    def get_pushups(
+        self,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
+        debug: bool = None,
+    ) -> list[Pushup]:
         if debug is None:
             debug = self.debug
         query = "SELECT * FROM pushups"
@@ -312,14 +342,18 @@ class Database:
         pushups = self.get_pushups(start_date, end_date, debug=debug)
 
         return {
-            'runs': {
-                'total': len(runs),
-                'total_distance': sum(r.distance_miles for r in runs),
-                'avg_distance': sum(r.distance_miles for r in runs) / len(runs) if runs else 0
+            "runs": {
+                "total": len(runs),
+                "total_distance": sum(r.distance_miles for r in runs),
+                "avg_distance": sum(r.distance_miles for r in runs) / len(runs)
+                if runs
+                else 0,
             },
-            'pushups': {
-                'total': len(pushups),
-                'total_count': sum(p.count for p in pushups),
-                'avg_count': sum(p.count for p in pushups) / len(pushups) if pushups else 0
-            }
+            "pushups": {
+                "total": len(pushups),
+                "total_count": sum(p.count for p in pushups),
+                "avg_count": sum(p.count for p in pushups) / len(pushups)
+                if pushups
+                else 0,
+            },
         }

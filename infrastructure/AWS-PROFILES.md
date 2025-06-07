@@ -6,7 +6,7 @@ This guide helps you configure AWS profiles to ensure fitlog only uses your pers
 
 With multiple AWS accounts (work + personal), you need:
 - **Isolation**: Prevent accidental deployments to wrong account
-- **Security**: Clear separation of credentials and permissions  
+- **Security**: Clear separation of credentials and permissions
 - **Convenience**: Easy switching between accounts
 - **Safety**: Built-in validation to catch mistakes
 
@@ -31,7 +31,7 @@ aws sts get-caller-identity --profile personal
 # Configure your personal profile
 aws configure --profile personal
 # AWS Access Key ID: [your personal access key]
-# AWS Secret Access Key: [your personal secret key]  
+# AWS Secret Access Key: [your personal secret key]
 # Default region name: us-east-1
 # Default output format: json
 
@@ -39,7 +39,7 @@ aws configure --profile personal
 aws configure --profile work
 # AWS Access Key ID: [your work access key]
 # AWS Secret Access Key: [your work secret key]
-# Default region name: us-east-1  
+# Default region name: us-east-1
 # Default output format: json
 ```
 
@@ -152,7 +152,7 @@ region = us-east-1
 ### **2. Enable MFA**
 
 ```ini
-# ~/.aws/config  
+# ~/.aws/config
 [profile personal]
 region = us-east-1
 mfa_serial = arn:aws:iam::123456789012:mfa/your-username
@@ -245,7 +245,7 @@ output = json
 # mfa_serial = arn:aws:iam::ACCOUNT-ID:mfa/USERNAME
 
 [profile work]
-region = us-east-1  
+region = us-east-1
 output = json
 # Work account configuration
 ```
@@ -277,4 +277,4 @@ aws sts get-caller-identity --query Account --output text
 
 ---
 
-**🔐 Remember**: Always double-check your AWS profile before running terraform commands. The account validation will catch most mistakes, but it's better to be explicit! 
+**🔐 Remember**: Always double-check your AWS profile before running terraform commands. The account validation will catch most mistakes, but it's better to be explicit!

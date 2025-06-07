@@ -32,21 +32,21 @@ command_exists() {
 # Function to validate AWS configuration
 validate_aws_config() {
     echo -e "${BLUE}🔍 Validating AWS configuration...${NC}"
-    
+
     # Check if AWS CLI is installed
     if ! command_exists aws; then
         echo -e "${RED}❌ AWS CLI is not installed${NC}"
         echo "Please install AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html"
         exit 1
     fi
-    
+
     # Check if Terraform is installed
     if ! command_exists terraform; then
         echo -e "${RED}❌ Terraform is not installed${NC}"
         echo "Please install Terraform: https://www.terraform.io/downloads.html"
         exit 1
     fi
-    
+
     # Check if profile exists
     if ! aws configure list --profile "$AWS_PROFILE" &>/dev/null; then
         echo -e "${RED}❌ AWS profile '$AWS_PROFILE' not found${NC}"
@@ -56,19 +56,19 @@ validate_aws_config() {
         echo "Or see AWS-PROFILES.md for detailed setup instructions"
         exit 1
     fi
-    
+
     # Get current account ID
     echo "Using AWS profile: $AWS_PROFILE"
     CURRENT_ACCOUNT_ID=$(aws sts get-caller-identity --profile "$AWS_PROFILE" --query Account --output text 2>/dev/null || echo "")
-    
+
     if [ -z "$CURRENT_ACCOUNT_ID" ]; then
         echo -e "${RED}❌ Failed to get AWS account ID${NC}"
         echo "Please check your AWS credentials and permissions"
         exit 1
     fi
-    
+
     echo "Current AWS Account ID: $CURRENT_ACCOUNT_ID"
-    
+
     # Validate account ID if provided
     if [ -n "$EXPECTED_ACCOUNT_ID" ]; then
         if [ "$CURRENT_ACCOUNT_ID" != "$EXPECTED_ACCOUNT_ID" ]; then
@@ -87,7 +87,7 @@ validate_aws_config() {
         echo "Consider setting EXPECTED_ACCOUNT_ID for additional safety"
         echo "Current account: $CURRENT_ACCOUNT_ID"
         echo ""
-        
+
         if [ "$AUTO_APPROVE" = true ]; then
             echo "Auto-approve enabled, proceeding with account: $CURRENT_ACCOUNT_ID"
         else
@@ -99,21 +99,21 @@ validate_aws_config() {
             fi
         fi
     fi
-    
+
     echo ""
 }
 
 # Function to run Terraform bootstrap
 run_bootstrap() {
     echo -e "${BLUE}📦 Running Terraform bootstrap...${NC}"
-    
+
     # Change to bootstrap directory
     cd "$BOOTSTRAP_DIR"
-    
+
     # Initialize Terraform
     echo "Initializing Terraform..."
     terraform init
-    
+
     # Plan with variables
     echo ""
     echo "Planning bootstrap infrastructure..."
@@ -122,14 +122,14 @@ run_bootstrap() {
         -var="aws_region=$AWS_REGION" \
         ${EXPECTED_ACCOUNT_ID:+-var="expected_account_id=$EXPECTED_ACCOUNT_ID"} \
         -out=bootstrap.tfplan
-    
+
     echo ""
     echo -e "${YELLOW}⚠️  About to create AWS resources:${NC}"
     echo "  - S3 bucket for Terraform state storage"
     echo "  - DynamoDB table for state locking"
     echo "  - Associated IAM policies and encryption"
     echo ""
-    
+
     if [ "$AUTO_APPROVE" = true ]; then
         echo "Auto-approve enabled, proceeding with bootstrap..."
     else
@@ -141,15 +141,15 @@ run_bootstrap() {
             exit 1
         fi
     fi
-    
+
     # Apply the plan
     echo ""
     echo "Applying bootstrap infrastructure..."
     terraform apply bootstrap.tfplan
-    
+
     # Clean up plan file
     rm -f bootstrap.tfplan
-    
+
     echo ""
     echo -e "${GREEN}✅ Bootstrap completed successfully!${NC}"
 }
@@ -157,12 +157,12 @@ run_bootstrap() {
 # Function to generate backend configuration
 generate_backend_config() {
     echo -e "${BLUE}📝 Generating backend configuration...${NC}"
-    
+
     # Get outputs from bootstrap
     STATE_BUCKET=$(terraform output -raw state_bucket_name)
     DYNAMODB_TABLE=$(terraform output -raw dynamodb_table_name)
     ACCOUNT_ID=$(terraform output -raw account_id)
-    
+
     # Create backend configuration file
     cat > ../backend.hcl <<EOF
 # Terraform Backend Configuration
@@ -176,7 +176,7 @@ dynamodb_table = "$DYNAMODB_TABLE"
 encrypt        = true
 profile        = "$AWS_PROFILE"
 EOF
-    
+
     # Create terraform.tfvars if it doesn't exist
     if [ ! -f "../terraform.tfvars" ]; then
         cat > ../terraform.tfvars <<EOF
@@ -196,7 +196,7 @@ project_name = "fitlog"
 EOF
         echo -e "${GREEN}✅ Created terraform.tfvars${NC}"
     fi
-    
+
     echo ""
     echo -e "${GREEN}✅ Backend configuration saved to backend.hcl${NC}"
     echo ""
@@ -221,23 +221,23 @@ main() {
     echo "AWS Region: $AWS_REGION"
     echo "Expected Account ID: ${EXPECTED_ACCOUNT_ID:-<not set>}"
     echo ""
-    
+
     # Validate prerequisites
     validate_aws_config
-    
+
     # Check if bootstrap directory exists
     if [ ! -d "$BOOTSTRAP_DIR" ]; then
         echo -e "${RED}❌ Bootstrap directory not found: $BOOTSTRAP_DIR${NC}"
         echo "Please run this script from the infrastructure directory"
         exit 1
     fi
-    
+
     # Run bootstrap
     run_bootstrap
-    
+
     # Generate backend configuration
     generate_backend_config
-    
+
     echo -e "${GREEN}🎉 Bootstrap process completed successfully!${NC}"
     echo ""
     echo -e "${BLUE}📚 For more information:${NC}"
@@ -304,4 +304,4 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Run main function
-main 
+main

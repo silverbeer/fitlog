@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Query
 
-sys.path.append('../..')
+sys.path.append("../..")
 from fitlog.models import Run
 
 router = APIRouter()
@@ -19,14 +19,15 @@ router = APIRouter()
 # from ..database import CloudDatabase
 # db = CloudDatabase()
 
+
 @router.post("/", response_model=dict)
 async def log_run(run: Run):
     """
     Log a new run - equivalent to 'fitlog log-run' CLI command.
-    
+
     Body should contain:
     - date: datetime
-    - duration: time 
+    - duration: time
     - distance_miles: float
     - Optional: heart_rate_avg, cadence_avg, etc.
     """
@@ -39,23 +40,24 @@ async def log_run(run: Run):
             "status": "success",
             "message": f"Logged run: {run.distance_miles} miles in {run.duration}",
             "run_id": run.activity_id,
-            "date": run.date.isoformat()
+            "date": run.date.isoformat(),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to log run: {str(e)}")
+
 
 @router.get("/", response_model=list[Run])
 async def get_runs(
     days: int = Query(1, description="Number of days back to retrieve runs"),
     start_date: str | None = Query(None, description="Start date in YYYY-MM-DD format"),
-    end_date: str | None = Query(None, description="End date in YYYY-MM-DD format")
+    end_date: str | None = Query(None, description="End date in YYYY-MM-DD format"),
 ):
     """
     Get runs from the database - equivalent to 'fitlog get-run' CLI command.
-    
+
     Query parameters:
     - days: Number of days back to look (default: 1)
-    - start_date: Optional start date 
+    - start_date: Optional start date
     - end_date: Optional end date
     """
     try:
@@ -76,7 +78,10 @@ async def get_runs(
         return []
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve runs: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve runs: {str(e)}"
+        )
+
 
 @router.get("/{run_id}")
 async def get_run_by_id(run_id: int):
@@ -91,6 +96,7 @@ async def get_run_by_id(run_id: int):
         return {"message": f"Get run {run_id} - not implemented yet"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve run: {str(e)}")
+
 
 @router.delete("/{run_id}")
 async def delete_run(run_id: int):

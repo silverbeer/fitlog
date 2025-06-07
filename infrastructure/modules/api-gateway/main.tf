@@ -5,7 +5,7 @@
 resource "aws_api_gateway_rest_api" "fitlog_api" {
   name        = var.api_name
   description = "Fitlog serverless API for exercise tracking"
-  
+
   endpoint_configuration {
     types = ["REGIONAL"]
   }
@@ -28,7 +28,7 @@ resource "aws_api_gateway_deployment" "fitlog_api" {
   }
 }
 
-# Root resource (/) 
+# Root resource (/)
 resource "aws_api_gateway_method" "root_method" {
   rest_api_id   = aws_api_gateway_rest_api.fitlog_api.id
   resource_id   = aws_api_gateway_rest_api.fitlog_api.root_resource_id
@@ -88,4 +88,4 @@ resource "aws_api_gateway_stage" "fitlog_stage" {
   stage_name    = var.environment
 
   tags = var.tags
-} 
+}
