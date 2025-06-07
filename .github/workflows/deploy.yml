@@ -6,6 +6,7 @@ on:
     paths:
       - 'api/**'
       - 'fitlog/**'
+      - 'tests/**'
       - 'pyproject.toml'
       - '.github/workflows/deploy.yml'
   pull_request:
@@ -13,6 +14,7 @@ on:
     paths:
       - 'api/**'
       - 'fitlog/**'
+      - 'tests/**'
       - 'pyproject.toml'
 
 env:
