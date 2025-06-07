@@ -6,15 +6,16 @@ supporting the same operations but via HTTP instead of local database.
 """
 
 import os
-from datetime import datetime
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from mangum import Mangum
 
 # We'll import from V1 models
 import sys
+from datetime import datetime
+
+from fastapi import FastAPI
+from mangum import Mangum
+from pydantic import BaseModel
+
 sys.path.append('..')
-from fitlog.models import Run, Pushup
 
 app = FastAPI(
     title="Fitlog API",
@@ -52,7 +53,7 @@ async def get_runs():
         "data": [],
         "todo": [
             "Connect to DuckDB on S3",
-            "Query runs from cloud database", 
+            "Query runs from cloud database",
             "Return paginated results"
         ]
     }
@@ -78,7 +79,7 @@ async def create_run(run: RunCreate):
 async def get_pushups():
     """Get all pushups - TODO: implement with DuckDB S3"""
     return {
-        "message": "Get pushups endpoint - ready for DuckDB S3 implementation", 
+        "message": "Get pushups endpoint - ready for DuckDB S3 implementation",
         "data": [],
         "todo": [
             "Connect to DuckDB on S3",
@@ -87,7 +88,7 @@ async def get_pushups():
         ]
     }
 
-@app.post("/pushups") 
+@app.post("/pushups")
 async def create_pushup(pushup: PushupCreate):
     """Create new pushup entry - TODO: implement with DuckDB S3"""
     return {
@@ -97,7 +98,7 @@ async def create_pushup(pushup: PushupCreate):
             "date": pushup.date or datetime.now().strftime("%m/%d/%y")
         },
         "todo": [
-            "Validate pushup data with fitlog.models.Pushup", 
+            "Validate pushup data with fitlog.models.Pushup",
             "Store in DuckDB on S3",
             "Return created pushup with ID"
         ]
@@ -116,7 +117,7 @@ async def get_activity_status():
         },
         "todo": [
             "Connect to DuckDB on S3",
-            "Calculate real statistics", 
+            "Calculate real statistics",
             "Return activity streaks and goals"
         ]
     }
@@ -145,4 +146,4 @@ handler = Mangum(app)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8000)

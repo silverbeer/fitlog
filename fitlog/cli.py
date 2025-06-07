@@ -1,21 +1,22 @@
-import typer
-from datetime import datetime, timedelta, time, timezone
-from typing import Optional
 import os
+from datetime import datetime, time, timedelta
+
+import typer
 from dotenv import load_dotenv
-from .models import Run, Pushup
-from .db import Database
-from .smashrun import SmashrunClient
 from rich.console import Console
-from rich.table import Table
 from rich.layout import Layout
 from rich.panel import Panel
+from rich.table import Table
+
+from .db import Database
+from .models import Pushup, Run
 from .renderer import (
-    render_stats,
+    render_error,
     render_recent_activities,
+    render_stats,
     render_success,
-    render_error
 )
+from .smashrun import SmashrunClient
 
 console = Console()
 
@@ -29,7 +30,7 @@ db = Database()
 def log_run(
     duration: str = typer.Option(..., help="Run duration in HH:MM:SS format"),
     distance: float = typer.Option(..., help="Distance in miles"),
-    date: Optional[str] = typer.Option(None, help="Date in MM/DD/YY format (default: today)"),
+    date: str | None = typer.Option(None, help="Date in MM/DD/YY format (default: today)"),
     debug: bool = typer.Option(False, "--debug", help="Show debug output")
 ):
     """Log a run with duration and distance."""
@@ -39,7 +40,7 @@ def log_run(
         # Parse duration string to time object
         h, m, s = map(int, duration.split(':'))
         duration_time = time(hour=h, minute=m, second=s)
-        
+
         # Parse date if provided
         run_date = datetime.now()
         if date:
@@ -47,7 +48,7 @@ def log_run(
                 run_date = datetime.strptime(date, "%m/%d/%y")
             except ValueError:
                 raise ValueError("Date must be in MM/DD/YY format")
-        
+
         run = Run(date=run_date, duration=duration_time, distance_miles=distance)
         db.log_run(run, debug=debug)
         render_success(f"Logged run: {distance} miles in {duration} on {run_date.strftime('%A %m/%d/%y')}")
@@ -57,7 +58,7 @@ def log_run(
 @app.command()
 def log_pushups(
     count: int = typer.Option(..., help="Number of pushups"),
-    date: Optional[str] = typer.Option(None, help="Date in MM/DD/YY format (default: today)"),
+    date: str | None = typer.Option(None, help="Date in MM/DD/YY format (default: today)"),
     debug: bool = typer.Option(False, "--debug", help="Show debug output")
 ):
     """Log pushups."""
@@ -71,7 +72,7 @@ def log_pushups(
                 pushup_date = datetime.strptime(date, "%m/%d/%y")
             except ValueError:
                 raise ValueError("Date must be in MM/DD/YY format")
-        
+
         pushup = Pushup(date=pushup_date, count=count)
         db.log_pushups(pushup)
         render_success(f"Logged {count} pushups on {pushup_date.strftime('%A %m/%d/%y')}")
@@ -91,7 +92,7 @@ def status(
         runs = db.get_runs(debug=debug)
         pushups = db.get_pushups(debug=debug)
         render_recent_activities(runs, pushups, days)
-        
+
         # Get and show statistics
         stats = db.get_stats(debug=debug)
         render_stats(stats)
@@ -110,18 +111,18 @@ def import_smashrun(
     if not access_token:
         render_error("No access token provided. Please set SMASHRUN_ACCESS_TOKEN environment variable or provide --access-token")
         raise typer.Exit(1)
-        
+
     try:
         # Initialize Smashrun client
         client = SmashrunClient(access_token)
-        
+
         # Calculate date range
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-        
+
         # Fetch runs from Smashrun
         runs = client.get_runs(start_date, end_date)
-        
+
         # Import runs to database
         imported_count = 0
         failed_count = 0
@@ -131,7 +132,7 @@ def import_smashrun(
                 imported_count += 1
             else:
                 failed_count += 1
-        
+
         if imported_count > 0:
             render_success(f"Imported {imported_count} runs from Smashrun")
         if failed_count > 0:
@@ -152,14 +153,14 @@ def get_run(
         # Calculate date range
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-        
+
         # Get runs from database
         runs = db.get_runs(start_date, end_date, debug=debug)
-        
+
         if not runs:
             render_error(f"No runs found in the last {days} day(s)")
             return
-        
+
         # Create table to display runs
         table = Table(title=f"🏃 Runs from {start_date.strftime('%m/%d/%y')} to {end_date.strftime('%m/%d/%y')}")
         table.add_column("Date", style="cyan")
@@ -169,7 +170,7 @@ def get_run(
         table.add_column("HR", style="red", justify="right")
         table.add_column("Cadence", style="magenta", justify="right")
         table.add_column("Weather", style="white")
-        
+
         for run in runs:
             weather_info = []
             if run.temperature is not None:
@@ -178,7 +179,7 @@ def get_run(
                 weather_info.append(run.weather_type)
             if run.wind_speed:
                 weather_info.append(f"{run.wind_speed}mph wind")
-            
+
             table.add_row(
                 run.date.strftime("%A %m/%d/%y %I:%M %p"),
                 f"{run.distance_miles:.1f}",
@@ -188,9 +189,9 @@ def get_run(
                 f"{run.cadence_avg}" if run.cadence_avg else "-",
                 ", ".join(weather_info) if weather_info else "-"
             )
-        
+
         console.print(table)
-        
+
         # Show splits if requested and available
     except Exception as e:
         render_error(str(e))
@@ -203,41 +204,41 @@ def report(
     """Show a summary report of your runs."""
     # Initialize database
     report_db = Database(debug=debug)
-    
+
     # Calculate date range
     end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
-    
+
     try:
         # Get runs in date range
         runs = report_db.get_runs(start_date, end_date, debug=debug)
-        
+
         if not runs:
             console.print("[yellow]No runs found for the specified period[/yellow]")
             return
-        
+
         # Calculate statistics
         total_runs = len(runs)
         total_miles = sum(run.distance_miles for run in runs)
         # Convert time to timedelta for total_seconds calculation
-        avg_pace = sum(timedelta(hours=r.pace_per_mile.hour, 
-                                minutes=r.pace_per_mile.minute, 
-                                seconds=r.pace_per_mile.second).total_seconds() 
+        avg_pace = sum(timedelta(hours=r.pace_per_mile.hour,
+                                minutes=r.pace_per_mile.minute,
+                                seconds=r.pace_per_mile.second).total_seconds()
                       for r in runs) / len(runs)
-        
+
         # Calculate averages for non-null values
         hr_runs = [run for run in runs if run.heart_rate_avg]
         cadence_runs = [run for run in runs if run.cadence_avg]
         avg_hr = sum(run.heart_rate_avg for run in hr_runs) / len(hr_runs) if hr_runs else 0
         avg_cadence = sum(run.cadence_avg for run in cadence_runs) / len(cadence_runs) if cadence_runs else 0
-        
+
         # Find records
-        fastest_run = min(runs, key=lambda r: timedelta(hours=r.pace_per_mile.hour, 
-                                                        minutes=r.pace_per_mile.minute, 
+        fastest_run = min(runs, key=lambda r: timedelta(hours=r.pace_per_mile.hour,
+                                                        minutes=r.pace_per_mile.minute,
                                                         seconds=r.pace_per_mile.second).total_seconds())
         highest_cadence_run = max(runs, key=lambda r: r.cadence_avg or 0)
         longest_run = max(runs, key=lambda r: r.distance_miles)
-        
+
         # Overall stats
         stats_table = Table(show_header=False, box=None)
         stats_table.add_row("Total Runs", f"{total_runs}")
@@ -247,7 +248,7 @@ def report(
             stats_table.add_row("Average HR", f"{avg_hr:.0f} bpm")
         if avg_cadence > 0:
             stats_table.add_row("Average Cadence", f"{avg_cadence:.0f} spm")
-        
+
         # Records table
         records_table = Table(show_header=False, box=None)
         records_table.add_row(
@@ -263,16 +264,16 @@ def report(
                 "Highest Cadence",
                 f"{highest_cadence_run.cadence_avg} spm on {highest_cadence_run.date.strftime('%m/%d/%y')}"
             )
-        
+
         # Layout
         layout = Layout()
         layout.split_column(
             Layout(Panel(stats_table, title="📊 Overall Statistics")),
             Layout(Panel(records_table, title="🏆 Personal Records"))
         )
-        
+
         console.print(layout)
-        
+
     except Exception as e:
         render_error(f"Failed to generate report: {str(e)}")
 
@@ -286,7 +287,7 @@ def drop_db(
         if not confirm:
             render_error("Operation cancelled")
             return
-    
+
     try:
         db.drop_tables()
         db._create_tables()

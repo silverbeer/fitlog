@@ -5,10 +5,11 @@ Provides endpoints for logging runs and retrieving run history,
 mirroring the CLI commands: log-run, get-run, etc.
 """
 
-from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
-from datetime import datetime, timedelta
 import sys
+from datetime import datetime, timedelta
+
+from fastapi import APIRouter, HTTPException, Query
+
 sys.path.append('../..')
 from fitlog.models import Run
 
@@ -32,7 +33,7 @@ async def log_run(run: Run):
     try:
         # TODO: Implement DuckDB S3 storage
         # result = await db.log_run(run)
-        
+
         # For now, return success response
         return {
             "status": "success",
@@ -43,11 +44,11 @@ async def log_run(run: Run):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to log run: {str(e)}")
 
-@router.get("/", response_model=List[Run])
+@router.get("/", response_model=list[Run])
 async def get_runs(
     days: int = Query(1, description="Number of days back to retrieve runs"),
-    start_date: Optional[str] = Query(None, description="Start date in YYYY-MM-DD format"),
-    end_date: Optional[str] = Query(None, description="End date in YYYY-MM-DD format")
+    start_date: str | None = Query(None, description="Start date in YYYY-MM-DD format"),
+    end_date: str | None = Query(None, description="End date in YYYY-MM-DD format")
 ):
     """
     Get runs from the database - equivalent to 'fitlog get-run' CLI command.
@@ -67,13 +68,13 @@ async def get_runs(
                 start_date_dt = datetime.fromisoformat(start_date)
             if end_date:
                 end_date_dt = datetime.fromisoformat(end_date)
-        
+
         # TODO: Implement DuckDB S3 retrieval
         # runs = await db.get_runs(start_date_dt, end_date_dt)
-        
+
         # For now, return empty list
         return []
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve runs: {str(e)}")
 
@@ -86,7 +87,7 @@ async def get_run_by_id(run_id: int):
         # if not run:
         #     raise HTTPException(status_code=404, detail="Run not found")
         # return run
-        
+
         return {"message": f"Get run {run_id} - not implemented yet"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve run: {str(e)}")
@@ -99,7 +100,7 @@ async def delete_run(run_id: int):
         # success = await db.delete_run(run_id)
         # if not success:
         #     raise HTTPException(status_code=404, detail="Run not found")
-        
+
         return {"status": "success", "message": f"Run {run_id} deleted"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete run: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Failed to delete run: {str(e)}")

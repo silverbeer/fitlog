@@ -2,6 +2,6 @@
 Routers package for fitlog cloud API.
 """
 
-from . import runs, pushups, activities
+from . import activities, pushups, runs
 
-__all__ = ["runs", "pushups", "activities"] 
+__all__ = ["runs", "pushups", "activities"]

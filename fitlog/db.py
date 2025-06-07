@@ -1,23 +1,25 @@
-import duckdb
 import time
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from datetime import datetime, timedelta, timezone
-from typing import List, Optional
-from .models import Run, Pushup, Split
+
+import duckdb
+
+from .models import Pushup, Run, Split
+
 
 class Database:
     def __init__(self, db_path: str = "data/fitlog.db", read_only: bool = False, debug: bool = False):
         self.db_path = db_path
         self.debug = debug
-        
+
         # Ensure data directory exists
         db_dir = Path(db_path).parent
         db_dir.mkdir(parents=True, exist_ok=True)
-        
+
         max_retries = 3
         retry_delay = 1  # seconds
         last_error = None
-        
+
         for attempt in range(max_retries):
             try:
                 if attempt > 0:
@@ -44,7 +46,7 @@ class Database:
                         break
                 elif not read_only:
                     raise
-        
+
         # If write access failed or read_only was requested, try read-only
         try:
             if self.debug:
@@ -57,7 +59,7 @@ class Database:
                 f"Could not connect to database after {max_retries} attempts: {str(last_error or e)}\n"
                 "Try closing any DuckDB shells or other programs that might be using the database."
             )
-    
+
     def _tables_exist(self) -> bool:
         """Check if the required tables exist."""
         result = self.conn.execute("""
@@ -65,7 +67,7 @@ class Database:
             WHERE type='table' AND name IN ('runs', 'splits', 'pushups')
         """).fetchone()[0]
         return result == 3
-    
+
     def drop_tables(self):
         """Drop all tables in the correct order to respect foreign key constraints."""
         print("Dropping tables...")
@@ -75,10 +77,10 @@ class Database:
         print("Dropped runs table")
         self.conn.execute("DROP TABLE IF EXISTS pushups")
         print("Dropped pushups table")
-    
+
     def _create_tables(self):
         print("Creating tables...")
-        
+
         # Create runs table with activity_id
         print("Creating runs table...")
         self.conn.execute("""
@@ -102,7 +104,7 @@ class Database:
         """)
         self.conn.commit()
         print("Created runs table")
-        
+
         # Create splits table for per-mile data
         print("Creating splits table...")
         self.conn.execute("""
@@ -118,7 +120,7 @@ class Database:
             )
         """)
         self.conn.commit()
-        
+
         print("Created splits table")
         # Create pushups table
         self.conn.execute("""
@@ -131,7 +133,7 @@ class Database:
         self.conn.commit()
         print("Tables committed")
         self.conn.commit()
-    
+
     def log_run(self, run: Run, debug: bool = None):
         if debug is None:
             debug = self.debug
@@ -147,25 +149,25 @@ class Database:
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, [
             run.activity_id,
-            run.date.strftime("%Y-%m-%d %H:%M:%S"), 
-            run.duration, 
-            run.distance_miles, 
+            run.date.strftime("%Y-%m-%d %H:%M:%S"),
+            run.duration,
+            run.distance_miles,
             run.pace_per_mile,
-            run.heart_rate_avg, 
-            run.heart_rate_max, 
+            run.heart_rate_avg,
+            run.heart_rate_max,
             run.heart_rate_min,
-            run.cadence_avg, 
-            run.cadence_max, 
+            run.cadence_avg,
+            run.cadence_max,
             run.cadence_min,
-            run.temperature, 
-            run.weather_type, 
-            run.humidity, 
+            run.temperature,
+            run.weather_type,
+            run.humidity,
             run.wind_speed
         ])
         if debug:
             print("Run logged successfully")
         self.conn.commit()
-        
+
         # Insert splits if available
         if run.splits:
             for split in run.splits:
@@ -178,18 +180,18 @@ class Database:
                     run.activity_id, split.mile_number, split.duration, split.pace,
                     split.heart_rate_avg, split.cadence_avg
                 ])
-        
+
         # Commit changes
         self.conn.commit()
-    
+
     def log_pushups(self, pushup: Pushup):
         self.conn.execute(
             "INSERT INTO pushups (date, count) VALUES (?, ?)",
             [pushup.date.strftime("%Y-%m-%d %H:%M:%S"), pushup.count]
         )
         self.conn.commit()
-    
-    def get_runs(self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None, debug: bool = None) -> List[Run]:
+
+    def get_runs(self, start_date: datetime | None = None, end_date: datetime | None = None, debug: bool = None) -> list[Run]:
         if debug is None:
             debug = self.debug
         # Get runs with all fields
@@ -201,13 +203,13 @@ class Database:
             FROM runs
         """
         params = []
-        
+
         if start_date or end_date:
             conditions = []
             if start_date:
                 # Convert to UTC for comparison
                 if start_date.tzinfo is None:
-                    start_date = start_date.replace(tzinfo=timezone.utc)
+                    start_date = start_date.replace(tzinfo=UTC)
                 conditions.append("substr(date, 1, 10) >= ?")
                 params.append(start_date.strftime("%Y-%m-%d"))
                 if debug:
@@ -215,7 +217,7 @@ class Database:
             if end_date:
                 # Convert to UTC for comparison
                 if end_date.tzinfo is None:
-                    end_date = end_date.replace(tzinfo=timezone.utc)
+                    end_date = end_date.replace(tzinfo=UTC)
                 conditions.append("substr(date, 1, 10) <= ?")
                 params.append(end_date.strftime("%Y-%m-%d"))
                 if debug:
@@ -224,12 +226,12 @@ class Database:
             if debug:
                 print(f"Query: {query}")
                 print(f"Params: {params}")
-        
+
         query += " ORDER BY date DESC"
-        
+
         runs = []
         result = self.conn.execute(query, params).fetchall()
-        
+
         for r in result:
             # Create run object
             run = Run(
@@ -249,7 +251,7 @@ class Database:
                 humidity=r[13],
                 wind_speed=r[14]
             )
-            
+
             # Get splits for this run
             splits_query = """
                 SELECT mile_number, duration, pace, heart_rate_avg, cadence_avg
@@ -258,7 +260,7 @@ class Database:
                 ORDER BY mile_number
             """
             splits_result = self.conn.execute(splits_query, [run.activity_id]).fetchall()
-            
+
             # Add splits to run
             run.splits = [
                 Split(
@@ -269,17 +271,17 @@ class Database:
                     cadence_avg=s[4]
                 ) for s in splits_result
             ]
-            
+
             runs.append(run)
-        
+
         return runs
-    
-    def get_pushups(self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None, debug: bool = None) -> List[Pushup]:
+
+    def get_pushups(self, start_date: datetime | None = None, end_date: datetime | None = None, debug: bool = None) -> list[Pushup]:
         if debug is None:
             debug = self.debug
         query = "SELECT * FROM pushups"
         params = []
-        
+
         if start_date or end_date:
             conditions = []
             if start_date:
@@ -294,21 +296,21 @@ class Database:
             if debug:
                 print(f"Pushups Query: {query}")
                 print(f"Pushups Params: {params}")
-        
+
         query += " ORDER BY date DESC"
-        
+
         result = self.conn.execute(query, params).fetchall()
         return [Pushup(date=p[0], count=p[1]) for p in result]
-    
+
     def get_stats(self, days: int = 30, debug: bool = None):
         if debug is None:
             debug = self.debug
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
-        
+
         runs = self.get_runs(start_date, end_date, debug=debug)
         pushups = self.get_pushups(start_date, end_date, debug=debug)
-        
+
         return {
             'runs': {
                 'total': len(runs),
@@ -320,4 +322,4 @@ class Database:
                 'total_count': sum(p.count for p in pushups),
                 'avg_count': sum(p.count for p in pushups) / len(pushups) if pushups else 0
             }
-        } 
+        }

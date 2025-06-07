@@ -5,9 +5,8 @@ Provides endpoints for activity summaries and reports,
 mirroring the CLI commands: status, report
 """
 
+
 from fastapi import APIRouter, HTTPException, Query
-from typing import Dict, Any
-from datetime import datetime, timedelta
 
 router = APIRouter()
 
@@ -27,7 +26,7 @@ async def get_status(days: int = Query(7, description="Number of days to show in
         # runs = await db.get_runs(days=days)
         # pushups = await db.get_pushups(days=days)
         # stats = await db.get_stats(days=30)  # Stats for last 30 days
-        
+
         # For now, return placeholder data
         return {
             "status": "success",
@@ -65,7 +64,7 @@ async def get_report(days: int = Query(7, description="Number of days to report 
         # TODO: Implement actual report generation
         # runs = await db.get_runs(days=days)
         # Calculate statistics, find records, etc.
-        
+
         # For now, return placeholder report structure
         return {
             "status": "success",
@@ -135,7 +134,7 @@ async def import_from_smashrun(
         # from ..smashrun import SmashrunCloudClient
         # client = SmashrunCloudClient(access_token)
         # imported_runs = await client.import_runs(days)
-        
+
         return {
             "status": "success",
             "message": "Smashrun import not implemented yet",
@@ -143,4 +142,4 @@ async def import_from_smashrun(
             "failed_count": 0
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to import from Smashrun: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Failed to import from Smashrun: {str(e)}")

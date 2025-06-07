@@ -1,5 +1,6 @@
 import json
 
+
 def handler(event, context):
     """Placeholder Lambda function"""
     return {
