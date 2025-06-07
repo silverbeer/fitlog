@@ -72,8 +72,8 @@ class Database:
             SELECT count(*) FROM sqlite_master
             WHERE type='table' AND name IN ('runs', 'splits', 'pushups')
         """
-        ).fetchone()[0]
-        return result == 3
+        ).fetchone()
+        return result is not None and result[0] == 3
 
     def drop_tables(self):
         """Drop all tables in the correct order to respect foreign key constraints."""

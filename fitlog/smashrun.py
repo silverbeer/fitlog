@@ -5,7 +5,7 @@ import requests
 from dotenv import load_dotenv, set_key
 from rich import print
 
-from .models import Run
+from .models import Run, Split
 
 
 class SmashrunClient:
@@ -198,9 +198,13 @@ class SmashrunClient:
             else:
                 print("[red]Failed to parse first run![/red]")
 
-        return [self._parse_run(run) for run in runs_data]
+        return [
+            parsed_run
+            for run in runs_data
+            if (parsed_run := self._parse_run(run)) is not None
+        ]
 
-    def _parse_run(self, run_data: dict) -> Run:
+    def _parse_run(self, run_data: dict) -> Run | None:
         """Parse a run from the Smashrun API response.
 
         Args:

@@ -205,7 +205,7 @@ def get_run(
                 run.date.strftime("%A %m/%d/%y %I:%M %p"),
                 f"{run.distance_miles:.1f}",
                 run.duration.strftime("%H:%M:%S"),
-                run.pace_per_mile.strftime("%M:%S"),
+                run.pace_per_mile.strftime("%M:%S") if run.pace_per_mile else "-",
                 f"{run.heart_rate_avg}" if run.heart_rate_avg else "-",
                 f"{run.cadence_avg}" if run.cadence_avg else "-",
                 ", ".join(weather_info) if weather_info else "-",
@@ -247,36 +247,43 @@ def report(
         total_runs = len(runs)
         total_miles = sum(run.distance_miles for run in runs)
         # Convert time to timedelta for total_seconds calculation
-        avg_pace = sum(
-            timedelta(
-                hours=r.pace_per_mile.hour,
-                minutes=r.pace_per_mile.minute,
-                seconds=r.pace_per_mile.second,
-            ).total_seconds()
-            for r in runs
-        ) / len(runs)
+        pace_runs = [r for r in runs if r.pace_per_mile is not None]
+        if pace_runs:
+            avg_pace = sum(
+                timedelta(
+                    hours=r.pace_per_mile.hour,  # type: ignore
+                    minutes=r.pace_per_mile.minute,  # type: ignore
+                    seconds=r.pace_per_mile.second,  # type: ignore
+                ).total_seconds()
+                for r in pace_runs
+            ) / len(pace_runs)
+        else:
+            avg_pace = 0
 
         # Calculate averages for non-null values
-        hr_runs = [run for run in runs if run.heart_rate_avg]
-        cadence_runs = [run for run in runs if run.cadence_avg]
-        avg_hr = (
-            sum(run.heart_rate_avg for run in hr_runs) / len(hr_runs) if hr_runs else 0
-        )
-        avg_cadence = (
-            sum(run.cadence_avg for run in cadence_runs) / len(cadence_runs)
-            if cadence_runs
-            else 0
-        )
+        hr_runs = [run for run in runs if run.heart_rate_avg is not None]
+        cadence_runs = [run for run in runs if run.cadence_avg is not None]
+        if hr_runs:
+            avg_hr = sum(run.heart_rate_avg for run in hr_runs) / len(hr_runs)  # type: ignore
+        else:
+            avg_hr = 0
+        if cadence_runs:
+            avg_cadence = sum(run.cadence_avg for run in cadence_runs) / len(cadence_runs)  # type: ignore
+        else:
+            avg_cadence = 0
 
         # Find records
-        fastest_run = min(
-            runs,
-            key=lambda r: timedelta(
-                hours=r.pace_per_mile.hour,
-                minutes=r.pace_per_mile.minute,
-                seconds=r.pace_per_mile.second,
-            ).total_seconds(),
-        )
+        if pace_runs:
+            fastest_run = min(
+                pace_runs,
+                key=lambda r: timedelta(
+                    hours=r.pace_per_mile.hour,  # type: ignore
+                    minutes=r.pace_per_mile.minute,  # type: ignore
+                    seconds=r.pace_per_mile.second,  # type: ignore
+                ).total_seconds(),
+            )
+        else:
+            fastest_run = None
         highest_cadence_run = max(runs, key=lambda r: r.cadence_avg or 0)
         longest_run = max(runs, key=lambda r: r.distance_miles)
 
@@ -294,10 +301,11 @@ def report(
 
         # Records table
         records_table = Table(show_header=False, box=None)
-        records_table.add_row(
-            "Fastest Run",
-            f"{fastest_run.distance_miles:.1f}mi at {fastest_run.pace_per_mile.strftime('%M:%S')}/mi on {fastest_run.date.strftime('%m/%d/%y')}",
-        )
+        if fastest_run and fastest_run.pace_per_mile:
+            records_table.add_row(
+                "Fastest Run",
+                f"{fastest_run.distance_miles:.1f}mi at {fastest_run.pace_per_mile.strftime('%M:%S')}/mi on {fastest_run.date.strftime('%m/%d/%y')}",
+            )
         records_table.add_row(
             "Longest Run",
             f"{longest_run.distance_miles:.1f}mi on {longest_run.date.strftime('%m/%d/%y')}",

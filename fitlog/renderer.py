@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
 from rich.console import Console
 from rich.panel import Panel
@@ -14,7 +14,9 @@ def format_time(t: datetime) -> str:
     return t.strftime("%A %m/%d/%y")
 
 
-def format_duration(t: datetime) -> str:
+def format_duration(t: datetime | time) -> str:
+    if isinstance(t, time):
+        return t.strftime("%H:%M:%S")
     return t.strftime("%H:%M:%S")
 
 
@@ -60,7 +62,7 @@ def render_recent_activities(
     table.add_column("Pushups", style="magenta", justify="right")
 
     # Create a dictionary to store daily activities
-    daily_activities = {}
+    daily_activities: dict[date, dict] = {}
 
     # Process runs
     for run in runs:
