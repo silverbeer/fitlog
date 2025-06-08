@@ -230,8 +230,9 @@ class CloudDatabase:
         try:
             # Generate activity_id if not provided
             if not run.activity_id:
-                # Use timestamp-based ID
-                run.activity_id = int(datetime.now().timestamp() * 1000)
+                # Use a smaller ID that fits in INT32 range
+                # Use seconds since epoch (not milliseconds) to keep it smaller
+                run.activity_id = int(datetime.now().timestamp())
 
             # Insert run data
             query = """
