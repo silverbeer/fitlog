@@ -184,6 +184,7 @@ jobs:
           pydantic \
           boto3 \
           mangum \
+          "aws-lambda-powertools[tracer]>=2.30.0" \
           --target lambda-deploy/
 
         # Create deployment zip

@@ -11,11 +11,6 @@ resource "aws_lambda_function" "fitlog_api" {
   timeout         = 30
   memory_size     = 512
 
-  # AWS Lambda Powertools layer for observability
-  layers = [
-    "arn:aws:lambda:us-east-1:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-x86_64:1"
-  ]
-
   environment {
     variables = {
       ENVIRONMENT = var.environment
