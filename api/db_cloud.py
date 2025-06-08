@@ -6,9 +6,9 @@ import os
 
 # Import models from local fitlog package
 import sys
-import time
 from datetime import UTC, datetime, timedelta
 
+import boto3
 import duckdb
 
 sys.path.append("..")
@@ -28,122 +28,83 @@ class CloudDatabase:
     def __init__(self, debug: bool = False):
         self.debug = debug
         self.db_path = os.getenv("DUCKDB_PATH", "s3://fitlog-dev-data/fitlog.db")
+        self.local_db_path = "/tmp/fitlog.db"
 
         if self.debug:
             print(f"Initializing CloudDatabase with path: {self.db_path}")
 
-        # Initialize connection
+        # Download database from S3 if needed
+        if self.db_path.startswith("s3://"):
+            self._download_db_from_s3()
+
+        # Initialize connection to local file
         self.conn = self._connect()
 
-    def _connect(self) -> duckdb.DuckDBPyConnection:
-        """Establish connection to DuckDB with S3 backend."""
-        max_retries = 3
-        retry_delay = 1
-        last_error = None
-
-        for attempt in range(max_retries):
-            try:
-                if attempt > 0:
-                    if self.debug:
-                        print(f"Retry attempt {attempt + 1} of {max_retries}...")
-                    time.sleep(retry_delay)
-
-                if self.debug:
-                    print(f"Connecting to DuckDB at {self.db_path}")
-
-                # Create DuckDB connection with Lambda-compatible settings
-                conn = duckdb.connect()
-
-                # Set home directory for Lambda environment
-                conn.execute("SET home_directory='/tmp';")
-                if self.debug:
-                    print("Set home directory to /tmp")
-
-                # Configure S3 settings for AWS Lambda environment
-                if self.db_path.startswith("s3://"):
-                    if self.debug:
-                        print("Configuring S3 settings for DuckDB...")
-
-                    try:
-                        # Install and load httpfs extension for S3 support
-                        conn.execute("INSTALL httpfs;")
-                        if self.debug:
-                            print("✅ httpfs extension installed")
-                    except Exception as e:
-                        if self.debug:
-                            print(f"httpfs install warning: {e}")
-                        # Extension might already be available, continue
-
-                    try:
-                        conn.execute("LOAD httpfs;")
-                        if self.debug:
-                            print("✅ httpfs extension loaded")
-                    except Exception as e:
-                        if self.debug:
-                            print(f"httpfs load warning: {e}")
-                        # Extension might already be loaded, continue
-
-                    # Use AWS credentials from Lambda environment
-                    # Lambda automatically provides these via IAM role
-                    region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
-                    conn.execute(f"SET s3_region='{region}';")
-                    if self.debug:
-                        print(f"Set S3 region to {region}")
-
-                    # For Lambda, we rely on IAM role credentials
-                    # No need to set access keys explicitly
-
-                if self.debug:
-                    print("DuckDB connection established successfully")
-
-                return conn
-
-            except Exception as e:
-                last_error = e
-                if self.debug:
-                    print(f"Connection attempt {attempt + 1} failed: {str(e)}")
-
-                if attempt == max_retries - 1:
-                    raise Exception(
-                        f"Could not connect to DuckDB after {max_retries} attempts: {str(e)}"
-                    )
-
-        raise Exception(f"Unexpected error in connection loop: {str(last_error)}")
-
-    def _tables_exist(self) -> bool:
-        """Check if the required tables exist in the database."""
+    def _download_db_from_s3(self):
+        """Download the database file from S3 to local temp storage."""
         try:
-            # For S3-hosted databases, we need to open the database file first
-            if self.db_path.startswith("s3://"):
-                # Try to access the S3 database and check tables
-                result = self.conn.execute(
-                    f"""
-                    ATTACH '{self.db_path}' AS s3db;
-                    SELECT count(*) FROM information_schema.tables
-                    WHERE table_schema = 'main'
-                    AND table_name IN ('runs', 'pushups', 'splits');
-                """
-                ).fetchone()
-            else:
-                result = self.conn.execute(
-                    """
-                    SELECT count(*) FROM information_schema.tables
-                    WHERE table_name IN ('runs', 'pushups', 'splits')
-                """
-                ).fetchone()
-
-            exists = result is not None and result[0] == 3
             if self.debug:
                 print(
-                    f"Tables exist check: {exists} (found {result[0] if result else 0} tables)"
+                    f"Downloading database from {self.db_path} to {self.local_db_path}"
                 )
-            return exists
+
+            # Parse S3 URL
+            s3_url = self.db_path.replace("s3://", "")
+            bucket, key = s3_url.split("/", 1)
+
+            # Use boto3 to download the file
+            s3_client = boto3.client("s3")
+            s3_client.download_file(bucket, key, self.local_db_path)
+
+            if self.debug:
+                file_size = os.path.getsize(self.local_db_path)
+                print(f"✅ Database downloaded successfully ({file_size} bytes)")
 
         except Exception as e:
             if self.debug:
-                print(f"Error checking tables: {str(e)}")
-            # If we can't check tables, assume they exist (since we migrated the database)
-            return True
+                print(f"Error downloading database: {str(e)}")
+            raise Exception(f"Failed to download database from S3: {str(e)}")
+
+    def _upload_db_to_s3(self):
+        """Upload the local database file back to S3."""
+        try:
+            if self.debug:
+                print(f"Uploading database from {self.local_db_path} to {self.db_path}")
+
+            # Parse S3 URL
+            s3_url = self.db_path.replace("s3://", "")
+            bucket, key = s3_url.split("/", 1)
+
+            # Use boto3 to upload the file
+            s3_client = boto3.client("s3")
+            s3_client.upload_file(self.local_db_path, bucket, key)
+
+            if self.debug:
+                print("✅ Database uploaded successfully to S3")
+
+        except Exception as e:
+            if self.debug:
+                print(f"Error uploading database: {str(e)}")
+            raise Exception(f"Failed to upload database to S3: {str(e)}")
+
+    def _connect(self) -> duckdb.DuckDBPyConnection:
+        """Establish connection to local DuckDB file."""
+        try:
+            if self.debug:
+                print(f"Connecting to local DuckDB at {self.local_db_path}")
+
+            # Connect to the local database file
+            conn = duckdb.connect(self.local_db_path)
+
+            if self.debug:
+                print("DuckDB connection established successfully")
+
+            return conn
+
+        except Exception as e:
+            if self.debug:
+                print(f"Connection failed: {str(e)}")
+            raise Exception(f"Could not connect to DuckDB: {str(e)}")
 
     def get_runs(
         self,
@@ -160,20 +121,13 @@ class CloudDatabase:
             )
 
         try:
-            # For S3 databases, attach the database first
-            if self.db_path.startswith("s3://"):
-                self.conn.execute(f"ATTACH '{self.db_path}' AS s3db;")
-                table_prefix = "s3db.main"
-            else:
-                table_prefix = ""
-
-            # Build query
-            query = f"""
+            # Build query for local database
+            query = """
                 SELECT activity_id, date, duration, distance_miles, pace_per_mile,
                        heart_rate_avg, heart_rate_max, heart_rate_min,
                        cadence_avg, cadence_max, cadence_min,
                        temperature, weather_type, humidity, wind_speed
-                FROM {table_prefix}.runs
+                FROM runs
             """
 
             params = []
@@ -241,12 +195,9 @@ class CloudDatabase:
     def _get_splits_for_run(self, activity_id: int) -> list[Split]:
         """Get splits for a specific run."""
         try:
-            # Use the already attached database
-            table_prefix = "s3db.main" if self.db_path.startswith("s3://") else ""
-
-            query = f"""
+            query = """
                 SELECT mile_number, duration, pace, heart_rate_avg, cadence_avg
-                FROM {table_prefix}.splits
+                FROM splits
                 WHERE activity_id = ?
                 ORDER BY mile_number
             """
@@ -282,16 +233,9 @@ class CloudDatabase:
                 # Use timestamp-based ID
                 run.activity_id = int(datetime.now().timestamp() * 1000)
 
-            # For S3 databases, attach the database first
-            if self.db_path.startswith("s3://"):
-                self.conn.execute(f"ATTACH '{self.db_path}' AS s3db;")
-                table_prefix = "s3db.main"
-            else:
-                table_prefix = ""
-
             # Insert run data
-            query = f"""
-                INSERT INTO {table_prefix}.runs (
+            query = """
+                INSERT INTO runs (
                     activity_id, date, duration, distance_miles, pace_per_mile,
                     heart_rate_avg, heart_rate_max, heart_rate_min,
                     cadence_avg, cadence_max, cadence_min,
@@ -323,8 +267,8 @@ class CloudDatabase:
             # Insert splits if available
             if run.splits:
                 for split in run.splits:
-                    split_query = f"""
-                        INSERT INTO {table_prefix}.splits (
+                    split_query = """
+                        INSERT INTO splits (
                             activity_id, mile_number, duration, pace,
                             heart_rate_avg, cadence_avg
                         ) VALUES (?, ?, ?, ?, ?, ?)
@@ -341,6 +285,10 @@ class CloudDatabase:
                             split.cadence_avg,
                         ],
                     )
+
+            # Upload the updated database back to S3
+            if self.db_path.startswith("s3://"):
+                self._upload_db_to_s3()
 
             if self.debug:
                 print(f"Run created successfully with ID: {run.activity_id}")
@@ -365,14 +313,7 @@ class CloudDatabase:
             )
 
         try:
-            # For S3 databases, attach the database first
-            if self.db_path.startswith("s3://"):
-                self.conn.execute(f"ATTACH '{self.db_path}' AS s3db;")
-                table_prefix = "s3db.main"
-            else:
-                table_prefix = ""
-
-            query = f"SELECT date, count FROM {table_prefix}.pushups"
+            query = "SELECT date, count FROM pushups"
             params = []
             conditions = []
 
@@ -406,21 +347,18 @@ class CloudDatabase:
             print(f"Creating pushup: date={pushup.date}, count={pushup.count}")
 
         try:
-            # For S3 databases, attach the database first
-            if self.db_path.startswith("s3://"):
-                self.conn.execute(f"ATTACH '{self.db_path}' AS s3db;")
-                table_prefix = "s3db.main"
-            else:
-                table_prefix = ""
-
-            query = f"""
-                INSERT INTO {table_prefix}.pushups (date, count)
+            query = """
+                INSERT INTO pushups (date, count)
                 VALUES (?, ?)
             """
 
             self.conn.execute(
                 query, [pushup.date.strftime("%Y-%m-%d %H:%M:%S"), pushup.count]
             )
+
+            # Upload the updated database back to S3
+            if self.db_path.startswith("s3://"):
+                self._upload_db_to_s3()
 
             if self.debug:
                 print("Pushup created successfully")
