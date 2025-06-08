@@ -143,6 +143,37 @@ wheels = [
 ]
 
 [[package]]
+name = "aws-lambda-powertools"
+version = "3.14.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jmespath" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/50/44/b9697966992dbf45fa208e50fe49132f5bf3445165c7e3054cf63d277479/aws_lambda_powertools-3.14.0.tar.gz", hash = "sha256:11e4d8a2c7855d1f3109a15c4ed6250465ae5e2e2762b42b99b67352cf246f1a", size = 675267, upload_time = "2025-06-03T12:18:29.931Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/75/bd5c48c4f48786ab6e30263f82c0e5af3cadccc18ebfcf1fe3f9918426b9/aws_lambda_powertools-3.14.0-py3-none-any.whl", hash = "sha256:4a36dbf44b4e0648c5e0e097ecbde974f18524c3096f50ee0f1ce7dcf0d64ef0", size = 806770, upload_time = "2025-06-03T12:18:27.661Z" },
+]
+
+[package.optional-dependencies]
+tracer = [
+    { name = "aws-xray-sdk" },
+]
+
+[[package]]
+name = "aws-xray-sdk"
+version = "2.14.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "botocore" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e0/6c/8e7fb2a45f20afc5c19d52807b560793fb48b0feca1de7de116b62a7893e/aws_xray_sdk-2.14.0.tar.gz", hash = "sha256:aab843c331af9ab9ba5cefb3a303832a19db186140894a523edafc024cc0493c", size = 93976, upload_time = "2024-06-04T22:11:38.124Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/41/69/b417833a8926fa5491e5346d7c233bf7d8a9b12ba1f4ef41ccea2494000c/aws_xray_sdk-2.14.0-py2.py3-none-any.whl", hash = "sha256:cfbe6feea3d26613a2a869d14c9246a844285c97087ad8f296f901633554ad94", size = 101922, upload_time = "2024-06-04T22:12:25.729Z" },
+]
+
+[[package]]
 name = "black"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -346,6 +377,7 @@ dependencies = [
 [package.optional-dependencies]
 cloud = [
     { name = "aioboto3" },
+    { name = "aws-lambda-powertools", extra = ["tracer"] },
     { name = "boto3" },
     { name = "fastapi" },
     { name = "mangum" },
@@ -370,6 +402,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "aioboto3", marker = "extra == 'cloud'", specifier = ">=12.0.0" },
+    { name = "aws-lambda-powertools", extras = ["tracer"], marker = "extra == 'cloud'", specifier = ">=2.30.0" },
     { name = "black", marker = "extra == 'dev'", specifier = ">=23.0.0" },
     { name = "boto3", marker = "extra == 'cloud'", specifier = ">=1.34.0" },
     { name = "duckdb", specifier = ">=0.10.0" },
