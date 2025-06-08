@@ -8,7 +8,12 @@ from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
 
-from .db import Database
+from .config import (
+    get_database_client,
+    setup_cloud_mode,
+    setup_local_mode,
+    show_config,
+)
 from .models import Pushup, Run
 from .renderer import (
     render_error,
@@ -24,7 +29,6 @@ console = Console()
 load_dotenv()
 
 app = typer.Typer()
-db = Database()
 
 
 @app.command()
@@ -38,8 +42,9 @@ def log_run(
 ):
     """Log a run with duration and distance."""
     try:
-        # Set debug mode on database instance
-        db.debug = debug
+        # Get database client (local or cloud based on config)
+        db = get_database_client()
+
         # Parse duration string to time object
         h, m, s = map(int, duration.split(":"))
         duration_time = time(hour=h, minute=m, second=s)
@@ -71,8 +76,9 @@ def log_pushups(
 ):
     """Log pushups."""
     try:
-        # Set debug mode on database instance
-        db.debug = debug
+        # Get database client (local or cloud based on config)
+        db = get_database_client()
+
         # Parse date if provided
         pushup_date = datetime.now()
         if date:
@@ -99,8 +105,9 @@ def status(
 ):
     """Show recent activities and statistics."""
     try:
-        # Set debug mode on database instance
-        db.debug = debug
+        # Get database client (local or cloud based on config)
+        db = get_database_client()
+
         # Get recent activities
         runs = db.get_runs(debug=debug)
         pushups = db.get_pushups(debug=debug)
@@ -139,7 +146,8 @@ def import_smashrun(
         # Fetch runs from Smashrun
         runs = client.get_runs(start_date, end_date)
 
-        # Import runs to database
+        # Get database client and import runs
+        db = get_database_client()
         imported_count = 0
         failed_count = 0
         for run in runs:
@@ -167,8 +175,9 @@ def get_run(
 ):
     """Get runs from the database."""
     try:
-        # Set debug mode on database instance
-        db.debug = debug
+        # Get database client (local or cloud based on config)
+        db = get_database_client()
+
         # Calculate date range
         end_date = datetime.now()
         start_date = end_date - timedelta(days=days)
@@ -228,8 +237,8 @@ def report(
     ),
 ):
     """Show a summary report of your runs."""
-    # Initialize database
-    report_db = Database(debug=debug)
+    # Get database client (local or cloud based on config)
+    report_db = get_database_client()
 
     # Calculate date range
     end_date = datetime.now()
@@ -343,6 +352,8 @@ def drop_db(
             return
 
     try:
+        # Get database client (local or cloud based on config)
+        db = get_database_client()
         db.drop_tables()
         db._create_tables()
         console.print(
@@ -350,6 +361,49 @@ def drop_db(
         )
     except Exception as e:
         render_error(f"Failed to drop database: {str(e)}")
+
+
+@app.command()
+def config_show():
+    """Show current configuration."""
+    show_config()
+
+
+@app.command()
+def config_cloud():
+    """Switch to cloud mode."""
+    if setup_cloud_mode():
+        console.print("[green]✅ Successfully switched to cloud mode[/green]")
+        console.print(
+            "[blue]💡 Make sure FITLOG_API_KEY is set in your environment[/blue]"
+        )
+    else:
+        console.print("[red]❌ Failed to configure cloud mode[/red]")
+
+
+@app.command()
+def config_local():
+    """Switch to local mode."""
+    if setup_local_mode():
+        console.print("[green]✅ Successfully switched to local mode[/green]")
+
+
+@app.command()
+def config_init():
+    """Create example .env file with configuration."""
+    try:
+        from .config import Config
+
+        config_obj = Config()
+        env_file = config_obj.create_env_file()
+        console.print(
+            f"[green]✅ Created example configuration file: {env_file}[/green]"
+        )
+        console.print(
+            "[blue]💡 Edit this file with your settings and rename to .env[/blue]"
+        )
+    except Exception as e:
+        render_error(f"Failed to create config file: {str(e)}")
 
 
 def main():
