@@ -73,6 +73,12 @@ variable "project_name" {
   default     = "fitlog"
 }
 
+variable "api_key" {
+  description = "API key for authentication"
+  type        = string
+  sensitive   = true
+}
+
 # Account validation - ensure we're using the correct AWS account
 locals {
   account_id = data.aws_caller_identity.current.account_id
@@ -134,6 +140,7 @@ module "lambda" {
   s3_bucket        = module.s3.bucket_name
   lambda_role_arn  = module.iam.lambda_role_arn
   environment      = var.environment
+  api_key          = var.api_key
   tags            = local.common_tags
 
   depends_on = [null_resource.account_validation]

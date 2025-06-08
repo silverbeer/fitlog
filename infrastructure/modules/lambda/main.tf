@@ -16,6 +16,7 @@ resource "aws_lambda_function" "fitlog_api" {
       ENVIRONMENT = var.environment
       S3_BUCKET   = var.s3_bucket
       DUCKDB_PATH = "s3://${var.s3_bucket}/fitlog.db"
+      API_KEY     = var.api_key
     }
   }
 

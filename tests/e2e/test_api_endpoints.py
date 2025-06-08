@@ -24,18 +24,60 @@ def api_base_url() -> str:
 
 @pytest.fixture(scope="session")
 def client(api_base_url: str):
-    """HTTP client configured for the deployed API"""
+    """HTTP client configured for the deployed API with authentication"""
     return APIClient(api_base_url)
 
 
-class APIClient:
-    """HTTP client for testing the deployed API"""
+@pytest.fixture(scope="session")
+def unauthenticated_client(api_base_url: str):
+    """HTTP client for public endpoints (no authentication)"""
+    return UnauthenticatedAPIClient(api_base_url)
+
+
+class UnauthenticatedAPIClient:
+    """HTTP client for public endpoints (no authentication required)"""
 
     def __init__(self, base_url: str):
         self.base_url = base_url
         self.session = requests.Session()
+
         self.session.headers.update(
             {"Content-Type": "application/json", "User-Agent": "fitlog-e2e-tests/1.0"}
+        )
+
+    def get(self, endpoint: str, **kwargs):
+        """Make GET request to API endpoint"""
+        url = f"{self.base_url}{endpoint}"
+        response = self.session.get(url, **kwargs)
+        return response
+
+    def post(self, endpoint: str, data: dict = None, **kwargs):
+        """Make POST request to API endpoint"""
+        url = f"{self.base_url}{endpoint}"
+        if data:
+            kwargs["json"] = data
+        response = self.session.post(url, **kwargs)
+        return response
+
+
+class APIClient:
+    """HTTP client for testing the deployed API with authentication"""
+
+    def __init__(self, base_url: str):
+        self.base_url = base_url
+        self.session = requests.Session()
+
+        # Get API key from environment
+        api_key = os.getenv("API_KEY")
+        if not api_key:
+            raise ValueError("API_KEY environment variable is required for E2E tests")
+
+        self.session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "User-Agent": "fitlog-e2e-tests/1.0",
+                "X-API-Key": api_key,
+            }
         )
 
     def get(self, endpoint: str, **kwargs):
@@ -57,9 +99,11 @@ class APIClient:
 class TestHealthAndStatus:
     """Test health check and status endpoints"""
 
-    def test_health_check_endpoint(self, client: APIClient):
-        """Test the root health check endpoint"""
-        response = client.get("/")
+    def test_health_check_endpoint(
+        self, unauthenticated_client: UnauthenticatedAPIClient
+    ):
+        """Test the root health check endpoint (public endpoint)"""
+        response = unauthenticated_client.get("/")
 
         assert response.status_code == 200
         data = response.json()
@@ -343,6 +387,45 @@ class TestActivitiesEndpoints:
 
 
 @pytest.mark.e2e
+class TestAuthentication:
+    """Test API authentication requirements"""
+
+    def test_protected_endpoints_require_authentication(
+        self, unauthenticated_client: UnauthenticatedAPIClient
+    ):
+        """Test that protected endpoints return 401 without API key"""
+        protected_endpoints = ["/runs", "/pushups", "/activities/status", "/test"]
+
+        for endpoint in protected_endpoints:
+            response = unauthenticated_client.get(endpoint)
+            assert (
+                response.status_code == 401
+            ), f"Endpoint {endpoint} should require authentication"
+
+            data = response.json()
+            assert "API key" in data["detail"]
+
+    def test_invalid_api_key_rejected(self, api_base_url: str):
+        """Test that invalid API keys are rejected"""
+        # Create client with invalid API key
+        session = requests.Session()
+        session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "User-Agent": "fitlog-e2e-tests/1.0",
+                "X-API-Key": "invalid_key_12345",
+            }
+        )
+
+        url = f"{api_base_url}/runs"
+        response = session.get(url)
+
+        assert response.status_code == 401
+        data = response.json()
+        assert "Invalid API key" in data["detail"]
+
+
+@pytest.mark.e2e
 class TestErrorHandling:
     """Test error handling and edge cases"""
 
@@ -386,12 +469,14 @@ class TestErrorHandling:
 class TestAPIPerformance:
     """Test API performance and reliability"""
 
-    def test_health_check_response_time(self, client: APIClient):
+    def test_health_check_response_time(
+        self, unauthenticated_client: UnauthenticatedAPIClient
+    ):
         """Test that health check responds quickly"""
         import time
 
         start_time = time.time()
-        response = client.get("/")
+        response = unauthenticated_client.get("/")
         end_time = time.time()
 
         response_time = end_time - start_time
@@ -399,13 +484,15 @@ class TestAPIPerformance:
         assert response.status_code == 200
         assert response_time < 5.0, f"Health check too slow: {response_time:.2f}s"
 
-    def test_multiple_concurrent_requests(self, client: APIClient):
+    def test_multiple_concurrent_requests(
+        self, unauthenticated_client: UnauthenticatedAPIClient
+    ):
         """Test handling multiple concurrent requests"""
         import concurrent.futures
 
         def make_request():
             try:
-                return client.get("/")
+                return unauthenticated_client.get("/")
             except Exception as e:
                 # Return error info for debugging
                 return {"error": str(e), "status_code": None}

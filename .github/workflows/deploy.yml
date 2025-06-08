@@ -332,6 +332,8 @@ jobs:
         done
 
     - name: 🚀 Run smoke test
+      env:
+        API_KEY: ${{ secrets.API_KEY }}
       run: |
         source .venv/bin/activate
         python tests/e2e/run_e2e_tests.py \
@@ -340,6 +342,8 @@ jobs:
           --verbose
 
     - name: 🧪 Run full E2E test suite
+      env:
+        API_KEY: ${{ secrets.API_KEY }}
       run: |
         source .venv/bin/activate
         python tests/e2e/run_e2e_tests.py \

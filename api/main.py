@@ -9,7 +9,7 @@ import os
 import sys
 from datetime import datetime, time
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from mangum import Mangum
 from pydantic import BaseModel, Field
 
@@ -23,6 +23,24 @@ app = FastAPI(
     description="Personal exercise tracking API - Cloud Version",
     version="2.0.0",
 )
+
+
+# Authentication
+async def verify_api_key(x_api_key: str = Header(None)):
+    """Verify API key for authentication"""
+    expected_key = os.getenv("API_KEY")
+    if not expected_key:
+        raise HTTPException(status_code=500, detail="API key not configured on server")
+
+    if not x_api_key:
+        raise HTTPException(
+            status_code=401, detail="API key required. Include 'X-API-Key' header."
+        )
+
+    if x_api_key != expected_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+    return True
 
 
 # Pydantic models for API requests
@@ -110,7 +128,7 @@ async def health_check():
     }
 
 
-@app.get("/runs", response_model=list[dict])
+@app.get("/runs", response_model=list[dict], dependencies=[Depends(verify_api_key)])
 async def get_runs(
     start_date: str | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="End date (YYYY-MM-DD)"),
@@ -176,7 +194,7 @@ async def get_runs(
         raise HTTPException(status_code=500, detail=f"Failed to get runs: {str(e)}")
 
 
-@app.post("/runs", response_model=dict)
+@app.post("/runs", response_model=dict, dependencies=[Depends(verify_api_key)])
 async def create_run(run_data: RunCreate):
     """Create a new run in the database."""
     try:
@@ -215,7 +233,7 @@ async def create_run(run_data: RunCreate):
         raise HTTPException(status_code=500, detail=f"Failed to create run: {str(e)}")
 
 
-@app.get("/pushups", response_model=list[dict])
+@app.get("/pushups", response_model=list[dict], dependencies=[Depends(verify_api_key)])
 async def get_pushups(
     start_date: str | None = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: str | None = Query(None, description="End date (YYYY-MM-DD)"),
@@ -260,7 +278,7 @@ async def get_pushups(
         raise HTTPException(status_code=500, detail=f"Failed to get pushups: {str(e)}")
 
 
-@app.post("/pushups", response_model=dict)
+@app.post("/pushups", response_model=dict, dependencies=[Depends(verify_api_key)])
 async def create_pushup(pushup_data: PushupCreate):
     """Create a new pushup entry in the database."""
     try:
@@ -296,7 +314,9 @@ async def create_pushup(pushup_data: PushupCreate):
         )
 
 
-@app.get("/activities/status", response_model=dict)
+@app.get(
+    "/activities/status", response_model=dict, dependencies=[Depends(verify_api_key)]
+)
 async def get_activity_status(
     days: int = Query(30, le=365, description="Number of days to analyze")
 ):
@@ -320,7 +340,7 @@ async def get_activity_status(
         )
 
 
-@app.get("/test")
+@app.get("/test", dependencies=[Depends(verify_api_key)])
 async def test_endpoint():
     """Test endpoint for GitHub Actions deployment verification"""
     return {

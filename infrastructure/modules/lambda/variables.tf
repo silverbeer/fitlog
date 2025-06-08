@@ -30,6 +30,12 @@ variable "create_placeholder_zip" {
   default     = true
 }
 
+variable "api_key" {
+  description = "API key for authentication"
+  type        = string
+  sensitive   = true
+}
+
 variable "tags" {
   description = "Tags to apply to Lambda resources"
   type        = map(string)
