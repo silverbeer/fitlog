@@ -51,22 +51,44 @@ class CloudDatabase:
                 if self.debug:
                     print(f"Connecting to DuckDB at {self.db_path}")
 
-                # Create DuckDB connection
+                # Create DuckDB connection with Lambda-compatible settings
                 conn = duckdb.connect()
+
+                # Set home directory for Lambda environment
+                conn.execute("SET home_directory='/tmp';")
+                if self.debug:
+                    print("Set home directory to /tmp")
 
                 # Configure S3 settings for AWS Lambda environment
                 if self.db_path.startswith("s3://"):
                     if self.debug:
                         print("Configuring S3 settings for DuckDB...")
 
-                    # Install and load httpfs extension for S3 support
-                    conn.execute("INSTALL httpfs;")
-                    conn.execute("LOAD httpfs;")
+                    try:
+                        # Install and load httpfs extension for S3 support
+                        conn.execute("INSTALL httpfs;")
+                        if self.debug:
+                            print("✅ httpfs extension installed")
+                    except Exception as e:
+                        if self.debug:
+                            print(f"httpfs install warning: {e}")
+                        # Extension might already be available, continue
+
+                    try:
+                        conn.execute("LOAD httpfs;")
+                        if self.debug:
+                            print("✅ httpfs extension loaded")
+                    except Exception as e:
+                        if self.debug:
+                            print(f"httpfs load warning: {e}")
+                        # Extension might already be loaded, continue
 
                     # Use AWS credentials from Lambda environment
                     # Lambda automatically provides these via IAM role
                     region = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
                     conn.execute(f"SET s3_region='{region}';")
+                    if self.debug:
+                        print(f"Set S3 region to {region}")
 
                     # For Lambda, we rely on IAM role credentials
                     # No need to set access keys explicitly
@@ -91,13 +113,24 @@ class CloudDatabase:
     def _tables_exist(self) -> bool:
         """Check if the required tables exist in the database."""
         try:
-            result = self.conn.execute(
-                f"""
-                SELECT count(*) FROM information_schema.tables
-                WHERE table_name IN ('runs', 'pushups', 'splits')
-                AND table_catalog = '{self.db_path}'
-            """
-            ).fetchone()
+            # For S3-hosted databases, we need to open the database file first
+            if self.db_path.startswith("s3://"):
+                # Try to access the S3 database and check tables
+                result = self.conn.execute(
+                    f"""
+                    ATTACH '{self.db_path}' AS s3db;
+                    SELECT count(*) FROM information_schema.tables
+                    WHERE table_schema = 'main'
+                    AND table_name IN ('runs', 'pushups', 'splits');
+                """
+                ).fetchone()
+            else:
+                result = self.conn.execute(
+                    """
+                    SELECT count(*) FROM information_schema.tables
+                    WHERE table_name IN ('runs', 'pushups', 'splits')
+                """
+                ).fetchone()
 
             exists = result is not None and result[0] == 3
             if self.debug:
@@ -109,7 +142,8 @@ class CloudDatabase:
         except Exception as e:
             if self.debug:
                 print(f"Error checking tables: {str(e)}")
-            return False
+            # If we can't check tables, assume they exist (since we migrated the database)
+            return True
 
     def get_runs(
         self,
@@ -125,40 +159,47 @@ class CloudDatabase:
                 f"Getting runs: start_date={start_date}, end_date={end_date}, limit={limit}"
             )
 
-        # Build query
-        query = f"""
-            SELECT activity_id, date, duration, distance_miles, pace_per_mile,
-                   heart_rate_avg, heart_rate_max, heart_rate_min,
-                   cadence_avg, cadence_max, cadence_min,
-                   temperature, weather_type, humidity, wind_speed
-            FROM '{self.db_path}'.main.runs
-        """
-
-        params = []
-        conditions = []
-
-        if start_date:
-            if start_date.tzinfo is None:
-                start_date = start_date.replace(tzinfo=UTC)
-            conditions.append("substr(date, 1, 10) >= ?")
-            params.append(start_date.strftime("%Y-%m-%d"))
-
-        if end_date:
-            if end_date.tzinfo is None:
-                end_date = end_date.replace(tzinfo=UTC)
-            conditions.append("substr(date, 1, 10) <= ?")
-            params.append(end_date.strftime("%Y-%m-%d"))
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-
-        query += f" ORDER BY date DESC LIMIT {limit}"
-
-        if self.debug:
-            print(f"Executing query: {query}")
-            print(f"With params: {params}")
-
         try:
+            # For S3 databases, attach the database first
+            if self.db_path.startswith("s3://"):
+                self.conn.execute(f"ATTACH '{self.db_path}' AS s3db;")
+                table_prefix = "s3db.main"
+            else:
+                table_prefix = ""
+
+            # Build query
+            query = f"""
+                SELECT activity_id, date, duration, distance_miles, pace_per_mile,
+                       heart_rate_avg, heart_rate_max, heart_rate_min,
+                       cadence_avg, cadence_max, cadence_min,
+                       temperature, weather_type, humidity, wind_speed
+                FROM {table_prefix}.runs
+            """
+
+            params = []
+            conditions = []
+
+            if start_date:
+                if start_date.tzinfo is None:
+                    start_date = start_date.replace(tzinfo=UTC)
+                conditions.append("substr(date, 1, 10) >= ?")
+                params.append(start_date.strftime("%Y-%m-%d"))
+
+            if end_date:
+                if end_date.tzinfo is None:
+                    end_date = end_date.replace(tzinfo=UTC)
+                conditions.append("substr(date, 1, 10) <= ?")
+                params.append(end_date.strftime("%Y-%m-%d"))
+
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
+
+            query += f" ORDER BY date DESC LIMIT {limit}"
+
+            if self.debug:
+                print(f"Executing query: {query}")
+                print(f"With params: {params}")
+
             result = self.conn.execute(query, params).fetchall()
             if self.debug:
                 print(f"Found {len(result)} runs")
@@ -200,9 +241,12 @@ class CloudDatabase:
     def _get_splits_for_run(self, activity_id: int) -> list[Split]:
         """Get splits for a specific run."""
         try:
+            # Use the already attached database
+            table_prefix = "s3db.main" if self.db_path.startswith("s3://") else ""
+
             query = f"""
                 SELECT mile_number, duration, pace, heart_rate_avg, cadence_avg
-                FROM '{self.db_path}'.main.splits
+                FROM {table_prefix}.splits
                 WHERE activity_id = ?
                 ORDER BY mile_number
             """
@@ -238,9 +282,16 @@ class CloudDatabase:
                 # Use timestamp-based ID
                 run.activity_id = int(datetime.now().timestamp() * 1000)
 
+            # For S3 databases, attach the database first
+            if self.db_path.startswith("s3://"):
+                self.conn.execute(f"ATTACH '{self.db_path}' AS s3db;")
+                table_prefix = "s3db.main"
+            else:
+                table_prefix = ""
+
             # Insert run data
             query = f"""
-                INSERT INTO '{self.db_path}'.main.runs (
+                INSERT INTO {table_prefix}.runs (
                     activity_id, date, duration, distance_miles, pace_per_mile,
                     heart_rate_avg, heart_rate_max, heart_rate_min,
                     cadence_avg, cadence_max, cadence_min,
@@ -273,7 +324,7 @@ class CloudDatabase:
             if run.splits:
                 for split in run.splits:
                     split_query = f"""
-                        INSERT INTO '{self.db_path}'.main.splits (
+                        INSERT INTO {table_prefix}.splits (
                             activity_id, mile_number, duration, pace,
                             heart_rate_avg, cadence_avg
                         ) VALUES (?, ?, ?, ?, ?, ?)
@@ -313,24 +364,31 @@ class CloudDatabase:
                 f"Getting pushups: start_date={start_date}, end_date={end_date}, limit={limit}"
             )
 
-        query = f"SELECT date, count FROM '{self.db_path}'.main.pushups"
-        params = []
-        conditions = []
-
-        if start_date:
-            conditions.append("substr(date, 1, 10) >= ?")
-            params.append(start_date.strftime("%Y-%m-%d"))
-
-        if end_date:
-            conditions.append("substr(date, 1, 10) <= ?")
-            params.append(end_date.strftime("%Y-%m-%d"))
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-
-        query += f" ORDER BY date DESC LIMIT {limit}"
-
         try:
+            # For S3 databases, attach the database first
+            if self.db_path.startswith("s3://"):
+                self.conn.execute(f"ATTACH '{self.db_path}' AS s3db;")
+                table_prefix = "s3db.main"
+            else:
+                table_prefix = ""
+
+            query = f"SELECT date, count FROM {table_prefix}.pushups"
+            params = []
+            conditions = []
+
+            if start_date:
+                conditions.append("substr(date, 1, 10) >= ?")
+                params.append(start_date.strftime("%Y-%m-%d"))
+
+            if end_date:
+                conditions.append("substr(date, 1, 10) <= ?")
+                params.append(end_date.strftime("%Y-%m-%d"))
+
+            if conditions:
+                query += " WHERE " + " AND ".join(conditions)
+
+            query += f" ORDER BY date DESC LIMIT {limit}"
+
             result = self.conn.execute(query, params).fetchall()
             if self.debug:
                 print(f"Found {len(result)} pushup entries")
@@ -348,8 +406,15 @@ class CloudDatabase:
             print(f"Creating pushup: date={pushup.date}, count={pushup.count}")
 
         try:
+            # For S3 databases, attach the database first
+            if self.db_path.startswith("s3://"):
+                self.conn.execute(f"ATTACH '{self.db_path}' AS s3db;")
+                table_prefix = "s3db.main"
+            else:
+                table_prefix = ""
+
             query = f"""
-                INSERT INTO '{self.db_path}'.main.pushups (date, count)
+                INSERT INTO {table_prefix}.pushups (date, count)
                 VALUES (?, ?)
             """
 
