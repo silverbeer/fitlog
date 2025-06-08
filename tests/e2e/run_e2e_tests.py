@@ -75,24 +75,37 @@ def run_e2e_tests(api_url: str, verbose: bool = False) -> bool:
 def run_quick_smoke_test(api_url: str) -> bool:
     """Run a quick smoke test of key endpoints"""
 
+    # Get API key from environment
+    api_key = os.getenv("API_KEY")
+
     endpoints_to_test = [
-        ("/", "GET"),
-        ("/test", "GET"),
-        ("/runs", "GET"),
-        ("/pushups", "GET"),
-        ("/activities/status", "GET"),
+        ("/", "GET", False),  # Public endpoint
+        ("/test", "GET", True),  # Protected endpoint
+        ("/runs", "GET", True),  # Protected endpoint
+        ("/pushups", "GET", True),  # Protected endpoint
+        ("/activities/status", "GET", True),  # Protected endpoint
     ]
 
     print(f"🚀 Running quick smoke test against: {api_url}")
 
     all_passed = True
-    for endpoint, method in endpoints_to_test:
+    for endpoint, method, requires_auth in endpoints_to_test:
         try:
             url = f"{api_url}{endpoint}"
+            headers = {}
+
+            # Add API key for protected endpoints
+            if requires_auth:
+                if not api_key:
+                    print(f"❌ {method:<4} {endpoint:<20} - No API key provided")
+                    all_passed = False
+                    continue
+                headers["X-API-Key"] = api_key
+
             if method == "GET":
-                response = requests.get(url, timeout=10)
+                response = requests.get(url, timeout=10, headers=headers)
             else:
-                response = requests.post(url, timeout=10)
+                response = requests.post(url, timeout=10, headers=headers)
 
             if response.status_code == 200:
                 print(f"✅ {method:<4} {endpoint:<20} - OK")
