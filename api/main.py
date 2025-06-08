@@ -195,7 +195,9 @@ async def health_check():
         "powertools": {"logger": "enabled", "tracer": "enabled", "metrics": "enabled"},
     }
 
-    logger.info("Health check completed", extra=health_data)
+    # Don't include reserved field names in extra logging data
+    log_data = {k: v for k, v in health_data.items() if k != "message"}
+    logger.info("Health check completed", extra=log_data)
     return health_data
 
 
