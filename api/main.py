@@ -52,7 +52,7 @@ def parse_duration(duration_str: str) -> time:
         # Validate ranges
         if hours >= 24:
             raise ValueError(
-                "Duration hours must be less than 24. For longer activities, please break them into multiple entries."
+                "Duration hours must be less than 24. For ultra-marathons, consider logging in segments."
             )
         if minutes >= 60:
             raise ValueError("Duration minutes must be less than 60")

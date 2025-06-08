@@ -132,7 +132,7 @@ class TestRunsEndpoints:
 
     def test_create_run_endpoint(self, client: APIClient):
         """Test POST /runs endpoint"""
-        run_data = {"duration": "30:15:00", "distance": 3.2, "date": "06/07/25"}
+        run_data = {"duration": "00:30:15", "distance": 3.2, "date": "06/07/25"}
 
         response = client.post("/runs", data=run_data)
 
@@ -154,7 +154,7 @@ class TestRunsEndpoints:
 
     def test_create_run_without_date(self, client: APIClient):
         """Test POST /runs endpoint without date (should default to today)"""
-        run_data = {"duration": "25:30:00", "distance": 2.8}
+        run_data = {"duration": "00:25:30", "distance": 2.8}
 
         response = client.post("/runs", data=run_data)
 
