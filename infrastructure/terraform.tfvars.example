@@ -1,0 +1,18 @@
+# Fitlog Terraform Variables - Example File
+# Copy this file to terraform.tfvars and fill in your values
+# terraform.tfvars is git-ignored for security
+
+# AWS Configuration
+aws_profile = "personal"
+aws_region  = "us-east-1"
+
+# IMPORTANT: Update this with your actual personal account ID for validation
+expected_account_id = "332089435055"
+
+# Environment Configuration
+environment = "dev"
+project_name = "fitlog"
+
+# API Authentication
+# Set via environment variable: export TF_VAR_api_key="your-secret-api-key"
+# api_key = "your-secret-api-key-here"
