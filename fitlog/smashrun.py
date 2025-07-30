@@ -113,9 +113,11 @@ class SmashrunClient:
             if response.status_code == 401 and self.refresh_token:
                 print("[yellow]Token expired, attempting refresh...[/yellow]")
                 if self._refresh_token():
+                    # Update instance headers with new token
+                    self.headers = self._get_headers()
                     # Update headers in kwargs if they exist
                     if "headers" in kwargs:
-                        kwargs["headers"] = self._get_headers()
+                        kwargs["headers"] = self.headers
                     # Retry request with new token
                     response = requests.request(method, url, **kwargs)
 
@@ -167,7 +169,6 @@ class SmashrunClient:
         )
 
         response = self._make_request("get", url, headers=self.headers, params=params)
-        response.raise_for_status()
 
         runs_data = response.json()
         if not runs_data:

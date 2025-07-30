@@ -26,7 +26,9 @@ from .smashrun import SmashrunClient
 console = Console()
 
 # Load environment variables from .env file
-load_dotenv()
+from pathlib import Path
+env_path = Path(__file__).parent.parent / ".env"
+load_dotenv(env_path)
 
 app = typer.Typer()
 
@@ -123,12 +125,14 @@ def status(
 @app.command()
 def import_smashrun(
     access_token: str = typer.Option(
-        os.getenv("SMASHRUN_ACCESS_TOKEN"),
+        None,
         help="Smashrun API access token (can be set via SMASHRUN_ACCESS_TOKEN env var)",
     ),
     days: int = typer.Option(30, help="Number of days of history to import"),
 ):
     """Import runs from Smashrun API."""
+    if not access_token:
+        access_token = os.getenv("SMASHRUN_ACCESS_TOKEN")
     if not access_token:
         render_error(
             "No access token provided. Please set SMASHRUN_ACCESS_TOKEN environment variable or provide --access-token"
